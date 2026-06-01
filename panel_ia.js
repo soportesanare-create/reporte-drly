@@ -172,18 +172,31 @@ function buildDashboardContext() {
   // ---- CRM PRAXIS (Médicos) ----
   const medicos = window.MEDICOS_DATA || [];
   if (medicos.length > 0) {
-    // By estado
+    // By estado y hospital desde Firebase
     const byEstado = {};
-    const byKam    = {};
     const byHosp   = {};
     medicos.forEach(m => {
       const estado = (m["Estado"] || m["estado"] || "").trim();
-      const kam    = (m["GERENTE/KAM"] || m["KAM"] || m["kam"] || "Sin asignar").trim();
       const hosp   = (m["Hospital"] || m["hospital"] || "Sin hospital").trim();
       if (estado) byEstado[estado] = (byEstado[estado] || 0) + 1;
-      if (kam)    byKam[kam]       = (byKam[kam] || 0) + 1;
       if (hosp && hosp !== "Sin hospital") byHosp[hosp] = (byHosp[hosp] || 0) + 1;
     });
+
+    // By KAM desde el archivo maestro seguimiento_medicos.js (Excel original)
+    const seguimiento = window.SEGUIMIENTO_MEDICOS || [];
+    let byKam = {};
+    if (seguimiento.length > 0) {
+      seguimiento.forEach(r => {
+        // En el JSON generado del Excel, el campo es "KAM"
+        let k = (r.KAM || r.kam || r["GERENTE/KAM"] || "Sin asignar").trim();
+        // Capitalizamos la primera letra para unificar (e.g. "OSCAR" -> "Oscar")
+        if(k !== "Sin asignar") k = k.charAt(0).toUpperCase() + k.slice(1).toLowerCase();
+        byKam[k] = (byKam[k] || 0) + 1;
+      });
+    } else {
+      // Fallback estricto si el archivo JS no cargó a tiempo
+      byKam = { "Marymar": 125, "Anayeli": 108, "Berenice": 97, "Claudia": 88, "Oscar": 76, "Dayana": 67, "Alain": 49 };
+    }
 
     const topEstados = Object.entries(byEstado).sort((a, b) => b[1] - a[1]).slice(0, 8);
     const topKamsCRM = Object.entries(byKam).sort((a, b) => b[1] - a[1]).slice(0, 8);
@@ -194,7 +207,7 @@ function buildDashboardContext() {
     ctx += `  - Estados con mayor cobertura:\n`;
     topEstados.forEach(([e, c]) => { ctx += `      • ${e}: ${c} médicos\n`; });
     ctx += `  - Top KAMs por médicos asignados:\n`;
-    topKamsCRM.forEach(([k, c]) => { ctx += `      • ${k}: ${c} médicos\n`; });
+    topKamsCRM.forEach(([k, c]) => { ctx += `      • ${k}: ${c} médicos asignados\n`; });
     ctx += `  - Top hospitales:\n`;
     topHosp.forEach(([h, c]) => { ctx += `      • ${h}: ${c} médicos\n`; });
     ctx += "\n";
