@@ -624,7 +624,7 @@ document.addEventListener("DOMContentLoaded", () => {
     aiResponseText.style.zIndex = "1";
     aiResponseText.innerHTML = `<span class="jane-thinking">
       <span class="dot-wave"><span>.</span><span>.</span><span>.</span></span>
-      <span style="color:var(--accent); font-family: 'JetBrains Mono', monospace; font-size:0.85rem; margin-left:8px;">Analizando datos de Matilde 360</span>
+      <span style="color:var(--accent); font-family: 'JetBrains Mono', monospace; font-size:0.85rem; margin-left:8px;">Analizando...</span>
     </span>`;
 
     aiSubmit.disabled = true;
