@@ -3,18 +3,18 @@
 // ────────────────────────────────────────────
 //  CONFIGURACIÓN GROQ — Auto-detect entorno
 // ────────────────────────────────────────────
-// Usa Groq directo en: local, GitHub Pages, file://
-// Usa backend seguro en: Vercel (vercel.app)
 const IS_VERCEL = (
   location.hostname.endsWith("vercel.app") ||
   location.hostname.endsWith(".vercel.app")
 );
 
-const GROQ_URL     = "https://api.groq.com/openai/v1/chat/completions";
-const GROQ_MODEL   = "llama-3.3-70b-versatile";
+// Siempre definidos para evitar ReferenceError en cualquier entorno
+const GROQ_URL       = "https://api.groq.com/openai/v1/chat/completions";
+const GROQ_MODEL     = "llama-3.3-70b-versatile";
 const VERCEL_API_URL = "/api/groq";
-// La API Key se carga desde config.js (excluido de GitHub por .gitignore)
-const GROQ_API_KEY = (window.APP_CONFIG && window.APP_CONFIG.GROQ_API_KEY) || "";
+// Key: config.js (local/GitHub Pages) → Vercel usa /api/groq con clave segura en env var
+const GROQ_API_KEY   = (window.APP_CONFIG && window.APP_CONFIG.GROQ_API_KEY)
+                     || "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";
 
 
 // ────────────────────────────────────────────
