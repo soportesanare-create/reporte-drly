@@ -240,6 +240,13 @@ function buildDashboardContext() {
     topKamsCRM.forEach(([k, c]) => { ctx += `      • ${k}: ${c} médicos asignados\n`; });
     ctx += `  - Top hospitales:\n`;
     topHosp.forEach(([h, c]) => { ctx += `      • ${h}: ${c} médicos\n`; });
+
+    ctx += `\n  - ASIGNACIONES ESPECÍFICAS DE MÉDICOS (Nombre: KAM):\n`;
+    Object.entries(kamByDoctor).forEach(([doc, kam]) => {
+      // Capitalizar nombre para la IA
+      const docCap = doc.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      ctx += `      • ${docCap}: ${kam}\n`;
+    });
     ctx += "\n";
   }
 
