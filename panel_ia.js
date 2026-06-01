@@ -182,19 +182,35 @@ function buildDashboardContext() {
       if (hosp && hosp !== "Sin hospital") byHosp[hosp] = (byHosp[hosp] || 0) + 1;
     });
 
-    // By KAM desde el archivo maestro seguimiento_medicos.js (Excel original)
+    // Unificar KAMs: Cruzar datos de Excel y Firebase sin duplicar médicos
     const seguimiento = window.SEGUIMIENTO_MEDICOS || [];
+    let kamByDoctor = {};
+
+    // 1. Cargar historial del Excel
+    seguimiento.forEach(r => {
+      let docName = (r.Médico || r.medico || r.Nombre || "Desconocido").trim().toLowerCase();
+      let k = (r.KAM || r.kam || r["GERENTE/KAM"] || "Sin asignar").trim();
+      if (k !== "Sin asignar") k = k.charAt(0).toUpperCase() + k.slice(1).toLowerCase();
+      if (docName !== "desconocido") kamByDoctor[docName] = k;
+    });
+
+    // 2. Agregar/Sobrescribir con los nuevos registros de Firebase
+    medicos.forEach(m => {
+      let docName = (m.Nombre || m.nombre || m.Médico || m.medico || "Desconocido").trim().toLowerCase();
+      let k = (m["GERENTE/KAM"] || m.KAM || m.kam || "Sin asignar").trim();
+      if (k !== "Sin asignar") {
+        k = k.charAt(0).toUpperCase() + k.slice(1).toLowerCase();
+        if (docName !== "desconocido") kamByDoctor[docName] = k;
+      }
+    });
+
+    // 3. Contar la asignación final
     let byKam = {};
-    if (seguimiento.length > 0) {
-      seguimiento.forEach(r => {
-        // En el JSON generado del Excel, el campo es "KAM"
-        let k = (r.KAM || r.kam || r["GERENTE/KAM"] || "Sin asignar").trim();
-        // Capitalizamos la primera letra para unificar (e.g. "OSCAR" -> "Oscar")
-        if(k !== "Sin asignar") k = k.charAt(0).toUpperCase() + k.slice(1).toLowerCase();
-        byKam[k] = (byKam[k] || 0) + 1;
-      });
-    } else {
-      // Fallback estricto si el archivo JS no cargó a tiempo
+    Object.values(kamByDoctor).forEach(k => {
+      byKam[k] = (byKam[k] || 0) + 1;
+    });
+
+    if (Object.keys(byKam).length === 0) {
       byKam = { "Marymar": 125, "Anayeli": 108, "Berenice": 97, "Claudia": 88, "Oscar": 76, "Dayana": 67, "Alain": 49 };
     }
 
