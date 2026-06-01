@@ -182,6 +182,20 @@ function buildDashboardContext() {
       if (hosp && hosp !== "Sin hospital") byHosp[hosp] = (byHosp[hosp] || 0) + 1;
     });
 
+    // Función para normalizar nombres de KAM y agrupar "Oscar Rangel" con "Oscar", "Anayely" con "Anayeli", etc.
+    const normalizeKam = (name) => {
+      if (!name) return "Sin asignar";
+      const str = name.toLowerCase();
+      if (str.includes("oscar")) return "Óscar";
+      if (str.includes("anayel")) return "Anayeli";
+      if (str.includes("marymar")) return "Marymar";
+      if (str.includes("bere")) return "Berenice";
+      if (str.includes("claudia")) return "Claudia";
+      if (str.includes("daya")) return "Dayana";
+      if (str.includes("alain")) return "Alain";
+      return "Sin asignar";
+    };
+
     // Unificar KAMs: Cruzar datos de Excel y Firebase sin duplicar médicos
     const seguimiento = window.SEGUIMIENTO_MEDICOS || [];
     let kamByDoctor = {};
@@ -189,17 +203,15 @@ function buildDashboardContext() {
     // 1. Cargar historial del Excel
     seguimiento.forEach(r => {
       let docName = (r.Médico || r.medico || r.Nombre || "Desconocido").trim().toLowerCase();
-      let k = (r.KAM || r.kam || r["GERENTE/KAM"] || "Sin asignar").trim();
-      if (k !== "Sin asignar") k = k.charAt(0).toUpperCase() + k.slice(1).toLowerCase();
+      let k = normalizeKam(r.KAM || r.kam || r["GERENTE/KAM"]);
       if (docName !== "desconocido") kamByDoctor[docName] = k;
     });
 
     // 2. Agregar/Sobrescribir con los nuevos registros de Firebase
     medicos.forEach(m => {
       let docName = (m.Nombre || m.nombre || m.Médico || m.medico || "Desconocido").trim().toLowerCase();
-      let k = (m["GERENTE/KAM"] || m.KAM || m.kam || "Sin asignar").trim();
+      let k = normalizeKam(m["GERENTE/KAM"] || m.KAM || m.kam);
       if (k !== "Sin asignar") {
-        k = k.charAt(0).toUpperCase() + k.slice(1).toLowerCase();
         if (docName !== "desconocido") kamByDoctor[docName] = k;
       }
     });
@@ -207,11 +219,13 @@ function buildDashboardContext() {
     // 3. Contar la asignación final
     let byKam = {};
     Object.values(kamByDoctor).forEach(k => {
-      byKam[k] = (byKam[k] || 0) + 1;
+      if(k !== "Sin asignar") {
+        byKam[k] = (byKam[k] || 0) + 1;
+      }
     });
 
     if (Object.keys(byKam).length === 0) {
-      byKam = { "Marymar": 125, "Anayeli": 108, "Berenice": 97, "Claudia": 88, "Oscar": 76, "Dayana": 67, "Alain": 49 };
+      byKam = { "Marymar": 125, "Anayeli": 108, "Berenice": 97, "Claudia": 88, "Óscar": 76, "Dayana": 67, "Alain": 49 };
     }
 
     const topEstados = Object.entries(byEstado).sort((a, b) => b[1] - a[1]).slice(0, 8);
