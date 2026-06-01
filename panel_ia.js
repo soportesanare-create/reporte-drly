@@ -170,7 +170,7 @@ function buildDashboardContext() {
   ctx += `  - Faltante para cerrar meta: ${formatMXN(Math.max(0, globalGoal - globalIncome))}\n\n`;
 
   // ---- CRM PRAXIS (Médicos) ----
-  const medicos = window.MEDICOS_DATA || [];
+  const medicos = window.crmMedicos || window.MEDICOS_DATA || [];
   if (medicos.length > 0) {
     // By estado y hospital desde Firebase
     const byEstado = {};
