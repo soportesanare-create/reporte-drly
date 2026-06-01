@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CRM INNVIDA — Dinámico v3 (híbrido)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <style>
+    :root{ --azul:#0A497B; --bg:#0d1117; --card:#0f1623; --muted:#94a3b8; --text:#e5e7eb; --line:#1f2937; }
+    *{ box-sizing:border-box } body{ margin:0; font-family:Inter,system-ui,Segoe UI,Arial; background:#0d1117; color:var(--text); }
+    header{ display:flex; align-items:center; gap:16px; padding:18px 22px; border-bottom:1px solid var(--line); position:sticky; top:0; background:#0d1117; z-index:10; }
+    header img{ height:56px; } header h1{ margin:0; font-size:18px; color:#e2e8f0; letter-spacing:.3px; }
+    a.link{ color:#93c5fd; text-decoration:none } a.link:hover{text-decoration:underline}
+    .container{ max-width:1300px; margin:16px auto; padding:16px; }
+    .tabs{ display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap }
+    .tab{ padding:8px 14px; background:#0f1623; border:1px solid var(--line); border-radius:10px; cursor:pointer; color:#93c5fd; font-weight:600; }
+    .tab.active{ background:linear-gradient(180deg,#0A497B,#08385f); color:white; border-color:#0A497B; box-shadow:0 8px 28px rgba(10,73,123,.25) }
+    .card{ background:#0f1623; border:1px solid var(--line); border-radius:12px; padding:14px; box-shadow:0 12px 40px rgba(2,6,23,.35); margin-bottom:16px; }
+    .muted{ color:var(--muted); font-size:13px; } .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center }
+    .btn{ padding:8px 12px; border-radius:10px; border:1px solid var(--line); background:#0A497B; color:white; cursor:pointer; font-weight:600; }
+    .btn.ghost{ background:transparent; color:#93c5fd; }
+    input, select{ padding:8px 10px; border-radius:8px; border:1px solid #243041; background:#0b1220; color:#e5e7eb; }
+    table{ width:100%; border-collapse:collapse; font-size:14px; } thead th{ text-align:left; padding:10px 8px; color:#a5b4fc; font-weight:600; font-size:12.5px; border-bottom:1px solid #1e293b; position:sticky; top:0; background:#0f1623; }
+    tbody td{ padding:8px; border-top:1px solid #1e293b; vertical-align:middle; color:#e5e7eb; } tbody tr:hover{ background:#0b1220 }
+    .center{text-align:center} .scroll{ overflow:auto; max-height:540px; }
+    .badge{ font-size:11px; padding:4px 8px; border-radius:999px; border:1px solid var(--line); background:#0b1220; color:#cbd5e1 }
+    .right{ margin-left:auto }
+    #map{ height:480px; border-radius:12px; border:1px solid var(--line); }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="logo.png" alt="INNVIDA">
+    <h1>CRM · INNVIDA — v3 híbrido</h1>
+    <div class="right"><a class="link" href="registrar.html">➕ Registrar</a></div>
+  </header>
+
+  <main class="container">
+    <div class="tabs" id="tabs">
+      <div class="tab active" data-tab="medicos">Médicos</div>
+      <div class="tab" data-tab="cotizaciones">Cotizaciones</div>
+      <div class="tab" data-tab="estadisticas">Estadísticas & Mapa</div>
+    </div>
+
+    <!-- MÉDICOS -->
+    <section id="medicos" class="tabcontent">
+      <div class="card row">
+        <div><strong>Base de Médicos</strong><div class="muted">Lectura desde medicos.json (y añadidos locales)</div></div>
+        <div class="row right">
+          <span class="badge" id="medCount">—</span>
+          <button class="btn" id="refreshMedicos">Refrescar</button>
+          <button class="btn ghost" id="downloadMedCSV">CSV</button>
+          <button class="btn ghost" id="downloadMedXLSX">Excel</button>
+        </div>
+      </div>
+      <div class="card row">
+        <div class="row" style="gap:8px;">
+          <input id="qMed" placeholder="Buscar nombre, hospital o especialidad..." style="min-width:260px">
+          <select id="fEstado"><option value="">Estado (todos)</option></select>
+          <select id="fRegion"><option value="">Región (todas)</option></select>
+          <select id="fKam"><option value="">KAM (todos)</option></select>
+          <label class="muted">Página: </label>
+          <select id="pageSizeMed"><option>10</option><option selected>20</option><option>50</option><option>100</option></select>
+        </div>
+      </div>
+      <div class="card scroll">
+        <table id="tableMedicos">
+          <thead><tr>
+            <th>Nombre</th><th>Teléfono</th><th>Dirección</th><th>Hospital</th><th>Red Social</th><th>Especialidad</th><th>Base</th><th>Estado</th><th>Región</th><th>Gerente / KAM</th><th class="center">Seguimiento</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="row" style="justify-content:flex-end;">
+        <span class="badge" id="pageInfoMed">—</span>
+        <button class="btn ghost" id="prevMed">Anterior</button>
+        <button class="btn ghost" id="nextMed">Siguiente</button>
+      </div>
+    </section>
+
+    <!-- COTIZACIONES -->
+    <section id="cotizaciones" class="tabcontent" style="display:none;">
+      <div class="card row">
+        <div><strong>Cotizaciones</strong><div class="muted">Lectura desde cotizaciones.json (y añadidos locales)</div></div>
+        <div class="row right">
+          <span class="badge" id="cotCount">—</span>
+          <button class="btn" id="refreshCots">Refrescar</button>
+          <button class="btn ghost" id="downloadCotCSV">CSV</button>
+          <button class="btn ghost" id="downloadCotXLSX">Excel</button>
+          <button class="btn" id="openRegCot">Registrar</button>
+        </div>
+      </div>
+      <div class="card row">
+        <div class="row" style="gap:8px;">
+          <input id="qCot" placeholder="Buscar en todas las columnas..." style="min-width:260px">
+          <select id="fEstadoCot"><option value="">Estado (todos)</option></select>
+          <label class="muted">Página: </label>
+          <select id="pageSizeCot"><option>10</option><option selected>20</option><option>50</option><option>100</option></select>
+        </div>
+      </div>
+      <div class="card scroll">
+        <table id="tableCots">
+          <thead><tr><th>#</th><th>FECHA</th><th>MEDICO</th><th>KAM</th><th>R0 DE INFU</th><th>PACIENTE</th><th>PAGO</th><th>STATUS</th><th>ESQUEMA</th><th>VALOR</th><th>CONFIRMADO</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="row" style="justify-content:flex-end;">
+        <span class="badge" id="pageInfoCot">—</span>
+        <button class="btn ghost" id="prevCot">Anterior</button>
+        <button class="btn ghost" id="nextCot">Siguiente</button>
+      </div>
+    </section>
+
+    <!-- ESTADISTICAS & MAPA -->
+    <section id="estadisticas" class="tabcontent" style="display:none;">
+      <div class="card row">
+        <div><strong>Panel</strong><div class="muted">Totales, conversión, estados y mapa por Estado</div></div>
+        <div style="display:flex; gap:8px;">
+          <div class="badge" id="badgeMed">—</div>
+          <div class="badge" id="badgeCot">—</div>
+          <div class="badge" id="badgeConv">—</div>
+        </div>
+      </div>
+      <div class="card" style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+        <canvas id="chartCotStatus" height="220"></canvas>
+        <canvas id="chartCotMonto" height="220"></canvas>
+      </div>
+      <div class="card">
+        <div id="map"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal seguimiento (solo Médicos) -->
+  <div id="modalBackdrop" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);">
+    <div style="width:720px;max-width:95%;background:#0f1623;border:1px solid #1f2937;border-radius:12px;padding:14px;">
+      <h3 style="margin:0 0 8px 0;">Seguimiento</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="field"><label class="muted">Médico</label><input id="modalMedico" disabled style="padding:8px;border-radius:8px;border:1px solid #243041;background:#0b1220;color:#e5e7eb;"></div>
+        <div class="field"><label class="muted">Estado</label>
+          <select id="modalEstado" style="padding:8px;border-radius:8px;border:1px solid #243041;background:#0b1220;color:#e5e7eb;">
+            <option>Contactado</option><option>Cita programada</option><option>Negociación</option><option>Cerrado</option><option>Sin respuesta</option>
+          </select>
+        </div>
+        <div class="field"><label class="muted">Próxima acción / Fecha de visita</label><input id="modalProxima" type="date" style="padding:8px;border-radius:8px;border:1px solid #243041;background:#0b1220;color:#e5e7eb;"></div>
+        <div class="field" style="grid-column:1/-1;"><label class="muted">Comentarios</label><textarea id="modalComentarios" rows="3" style="padding:8px;border-radius:8px;border:1px solid #243041;background:#0b1220;color:#e5e7eb;"></textarea></div>
+        <div class="field" style="grid-column:1/-1;"><label class="muted">KAM / Gerente</label><input id="modalKam" style="padding:8px;border-radius:8px;border:1px solid #243041;background:#0b1220;color:#e5e7eb;"></div>
+      </div>
+      <div class="row" style="justify-content:flex-end;margin-top:12px;">
+        <button class="btn ghost" id="cancelModal">Cancelar</button><button class="btn" id="saveModal">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+const ENDPOINTS={ seguimiento:'https://script.google.com/macros/s/AKfycbyYfyO0dbqOk_O4x6-pkk8oCPVBfUsfbKtzpsXRpThsxhXHSO2s97mwwYUpY4s2DuA/exe' };
+const $=s=>document.querySelector(s); const $$=s=>Array.from(document.querySelectorAll(s));
+const money=v=>new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN'}).format(Number(v)||0);
+const MX_STATES = {"Aguascalientes":[21.8853,-102.2916],"Baja California":[30.8406,-115.2838],"Baja California Sur":[26.0444,-111.6661],"Campeche":[18.8048,-90.5255],"Coahuila":[27.0587,-101.7068],"Colima":[19.2452,-103.7241],"Chiapas":[16.7569,-93.1292],"Chihuahua":[28.6320,-106.0691],"Ciudad de México":[19.4326,-99.1332],"Durango":[24.0277,-104.6532],"Guanajuato":[21.0190,-101.2574],"Guerrero":[17.4392,-99.5451],"Hidalgo":[20.1011,-98.7624],"Jalisco":[20.6597,-103.3496],"México":[19.2921,-99.6557],"Michoacán":[19.5665,-101.7068],"Morelos":[18.6813,-99.1013],"Nayarit":[21.7514,-104.8455],"Nuevo León":[25.5922,-99.9962],"Oaxaca":[17.0732,-96.7266],"Puebla":[19.0414,-98.2063],"Querétaro":[20.5888,-100.3899],"Quintana Roo":[19.1817,-88.4791],"San Luis Potosí":[22.1565,-100.9855],"Sinaloa":[24.8091,-107.3940],"Sonora":[29.2972,-110.3309],"Tabasco":[17.8409,-92.6189],"Tamaulipas":[24.2669,-98.8363],"Tlaxcala":[19.3182,-98.2375],"Veracruz":[19.1738,-96.1342],"Yucatán":[20.7099,-89.0943],"Zacatecas":[22.7709,-102.5832]};
+
+let MED_BASE=[], COT_BASE=[];
+
+async function loadJSON(path){ const r=await fetch(path+'?v='+(Date.now())); return await r.json(); }
+function mergeLocalAdditions(baseArr, key){ const local=JSON.parse(localStorage.getItem(key)||'[]'); return baseArr.concat(local); }
+
+/* MÉDICOS */
+let MED_FILT=[]; let medPage=1; let medSize=20;
+const tbMed=$('#tableMedicos tbody'); const pageInfoMed=$('#pageInfoMed');
+const qMed=$('#qMed'), fEstado=$('#fEstado'), fRegion=$('#fRegion'), fKam=$('#fKam'), pageSelMed=$('#pageSizeMed');
+function distinct(arr){ return Array.from(new Set(arr.filter(Boolean))).sort((a,b)=>(''+a).localeCompare((''+b),'es',{sensitivity:'base'})); }
+async function initMedicos(){
+  const raw = await loadJSON('medicos.json');
+  MED_BASE = mergeLocalAdditions(raw, 'medicos_local_add');
+  $('#medCount').textContent = MED_BASE.length+' médicos';
+  fEstado.innerHTML = '<option value="">Estado (todos)</option>' + distinct(MED_BASE.map(r=> r['Estado']||r['estado']||'')).map(v=> `<option>${v}</option>`).join('');
+  fRegion.innerHTML = '<option value="">Región (todas)</option>' + distinct(MED_BASE.map(r=> r['Región']||r['Region']||r['region']||'' )).map(v=> `<option>${v}</option>`).join('');
+  fKam.innerHTML = '<option value="">KAM (todos)</option>' + distinct(MED_BASE.map(r=> r['GERENTE/KAM']||r['KAM']||r['kam']||'' )).map(v=> `<option>${v}</option>`).join('');
+  applyMedFilters();
+}
+function applyMedFilters(){
+  const q=(qMed.value||'').toLowerCase();
+  const est=fEstado.value||''; const reg=fRegion.value||''; const kam=fKam.value||'';
+  MED_FILT = (MED_BASE||[]).filter(r=>{
+    const name=(r['Nombre']||r['nombre']||'').toLowerCase();
+    const hosp=(r['Hospital']||r['hospital']||'').toLowerCase();
+    const esp=(r['Especialidad']||r['especialidad']||'').toLowerCase();
+    const okQ = q ? (name.includes(q)||hosp.includes(q)||esp.includes(q)) : true;
+    const okE = est ? ((r['Estado']||r['estado']||'')===est) : true;
+    const okR = reg ? ((r['Región']||r['Region']||r['region']||'')===reg) : true;
+    const okK = kam ? ((r['GERENTE/KAM']||r['KAM']||r['kam']||'')===kam) : true;
+    return okQ && okE && okR && okK;
+  });
+  medPage=1; renderMedicos();
+}
+function renderMedicos(){
+  tbMed.innerHTML='';
+  medSize=parseInt(pageSelMed.value||'20',10);
+  const total=MED_FILT.length, pages=Math.max(1,Math.ceil(total/medSize));
+  if(medPage>pages) medPage=pages;
+  const start=(medPage-1)*medSize; const slice=MED_FILT.slice(start,start+medSize);
+  if(!slice.length){ tbMed.innerHTML='<tr><td colspan="11" class="muted">Sin resultados</td></tr>'; }
+  slice.forEach(r=>{
+    const tr=document.createElement('tr');
+    const nombre=r['Nombre']||r['nombre']||''; const tel=r['Teléfono']||r['Telefono']||r['telefono']||''; const dir=r['Dirección']||r['Direccion']||r['direccion']||'';
+    tr.innerHTML=`
+      <td>${nombre}</td><td>${tel}</td><td>${dir}</td>
+      <td>${r['Hospital']||r['hospital']||''}</td><td>${r['Red Social']||r['red']||''}</td><td>${r['Especialidad']||r['especialidad']||''}</td>
+      <td>${r['Base']||r['base']||''}</td><td>${r['Estado']||r['estado']||''}</td><td>${r['Región']||r['Region']||r['region']||''}</td><td>${r['GERENTE/KAM']||r['KAM']||r['kam']||''}</td>
+      <td class="center"><button class="btn ghost">+ Seguimiento</button></td>`;
+    tr.querySelector('button').addEventListener('click',()=> openModal({Nombre:nombre, KAM:(r['GERENTE/KAM']||r['KAM']||r['kam']||'')}));
+    tbMed.appendChild(tr);
+  });
+  pageInfoMed.textContent = `Mostrando ${slice.length} de ${total} — Página ${medPage}/${Math.max(1,Math.ceil(total/medSize))}`;
+}
+$('#prevMed').addEventListener('click',()=>{ if(medPage>1){ medPage--; renderMedicos(); } });
+$('#nextMed').addEventListener('click',()=>{ const pages=Math.max(1,Math.ceil(MED_FILT.length/medSize)); if(medPage<pages){ medPage++; renderMedicos(); } });
+[qMed,fEstado,fRegion,fKam].forEach(el=> el.addEventListener('input', applyMedFilters));
+pageSelMed.addEventListener('change', renderMedicos);
+$('#refreshMedicos').addEventListener('click', initMedicos);
+function downloadCSV(filename, rows){
+  if(!rows.length) return alert('Sin datos');
+  const keys=Object.keys(rows[0]); const csv=[keys.join(',')].concat(rows.map(r=>keys.map(k=>`"${(r[k]||'').toString().replace(/"/g,'""')}"`).join(','))).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url);
+}
+$('#downloadMedCSV').addEventListener('click', ()=> downloadCSV('medicos.csv', MED_BASE));
+function downloadXLSX(filename, rows){
+  if(!rows.length) return alert('Sin datos');
+  const wb=XLSX.utils.book_new(); const ws=XLSX.utils.json_to_sheet(rows); XLSX.utils.book_append_sheet(wb, ws, 'Datos'); XLSX.writeFile(wb, filename);
+}
+$('#downloadMedXLSX').addEventListener('click', ()=> downloadXLSX('medicos.xlsx', MED_BASE));
+
+/* COTIZACIONES */
+let COT_FILT=[]; let cotPage=1; let cotSize=20;
+const tbCots=$('#tableCots tbody'); const pageInfoCot=$('#pageInfoCot');
+const qCot=$('#qCot'), fEstadoCot=$('#fEstadoCot'), pageSelCot=$('#pageSizeCot');
+async function initCots(){
+  const raw = await loadJSON('cotizaciones.json');
+  COT_BASE = mergeLocalAdditions(raw, 'cotizaciones_local_add');
+  $('#cotCount').textContent = COT_BASE.length+' cotizaciones';
+  const estados = distinct(COT_BASE.map(r=> r['STATUS'] || r['Status'] || r['status'] || 'Pendiente'));
+  fEstadoCot.innerHTML = '<option value="">Estado (todos)</option>' + estados.map(v=>`<option>${v}</option>`).join('');
+  applyCotFilters();
+}
+
+function applyCotFilters(){
+  const q=(qCot.value||'').toLowerCase(); const est=fEstadoCot.value||'';
+  COT_FILT = (COT_BASE||[]).filter(r=>{
+    const any = ['FECHA','MEDICO','KAM','R0 DE INFU','PACIENTE','PAGO','STATUS','ESQUEMA','VALOR','CONFIRMADO']
+      .some(k => ((r[k]||'')+'').toLowerCase().includes(q));
+    const byStatus = !est || (r['STATUS']||r['Status']||r['status']||'')===est;
+    return any && byStatus;
+  });
+  cotPage=1;
+  renderCotizaciones();
+}
+
+
+function renderCotizaciones(){
+  tbCots.innerHTML='';
+  cotSize=parseInt(pageSelCot.value||'20',10);
+  const total=COT_FILT.length, pages=Math.max(1,Math.ceil(total/cotSize));
+  if(cotPage>pages) cotPage=pages;
+  const start=(cotPage-1)*cotSize; const slice=COT_FILT.slice(start,start+cotSize);
+  if(!slice.length){ tbCots.innerHTML='<tr><td colspan="11" class="muted">Sin resultados</td></tr>'; }
+  slice.forEach((r,i)=>{
+    const idx=start+i;
+    const tr=document.createElement('tr');
+    const VAL = (r['VALOR']||'').toString();
+    tr.innerHTML=`<td>${idx+1}</td>
+      <td>${r['FECHA']||''}</td>
+      <td>${r['MEDICO']||''}</td>
+      <td>${r['KAM']||''}</td>
+      <td>${r['R0 DE INFU']||r['RO DE INFU']||''}</td>
+      <td>${r['PACIENTE']||''}</td>
+      <td>${r['PAGO']||''}</td>
+      <td>${r['STATUS']||''}</td>
+      <td>${r['ESQUEMA']||''}</td>
+      <td>${(function(v){ 
+      if(v==null) return '$0.00'; 
+      v = (''+v).replace(/[^0-9.,-]/g,'').replace(/,/g,''); 
+      var n = parseFloat(v||'0'); 
+      return isNaN(n) ? (''+v) : ('$' + n.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})); 
+    })(VAL)}</td>
+      <td>${r['CONFIRMADO']||''}</td>`;
+    tbCots.appendChild(tr);
+  });
+  pageInfoCot.textContent = `Mostrando ${slice.length} de ${total} — Página ${cotPage}/${Math.max(1,Math.ceil(total/cotSize))}`;
+}
+
+$('#prevCot').addEventListener('click',()=>{ if(cotPage>1){ cotPage-=1; renderCotizaciones(); } });
+$('#nextCot').addEventListener('click',()=>{ const pages=Math.max(1,Math.ceil(COT_FILT.length/cotSize)); if(cotPage<pages){ cotPage+=1; renderCotizaciones(); } });
+[qCot,fEstadoCot].forEach(el=> el.addEventListener('input', applyCotFilters));
+pageSelCot.addEventListener('change', renderCotizaciones);
+$('#refreshCots').addEventListener('click', initCots);
+$('#downloadCotCSV').addEventListener('click', ()=> downloadCSV('cotizaciones.csv', COT_BASE));
+$('#downloadCotXLSX').addEventListener('click', ()=> downloadXLSX('cotizaciones.xlsx', COT_BASE));
+
+/* ESTADÍSTICAS & MAPA */
+let chartStatus, chartMonto, map, layer;
+function buildStats(){
+  $('#badgeMed').textContent = 'Médicos: '+(MED_BASE?MED_BASE.length:0);
+  $('#badgeCot').textContent = 'Cotizaciones: '+(COT_BASE?COT_BASE.length:0);
+  const statusCounts = {};
+  (COT_BASE||[]).forEach(c => { const s = c['Estado']||c['estado']||'Pendiente'; statusCounts[s] = (statusCounts[s]||0)+1; });
+  const labels = Object.keys(statusCounts); const values = labels.map(l=> statusCounts[l]);
+  const aceptadas = statusCounts['Aceptada'] || statusCounts['ACEPTADA'] || 0;
+  const conversion = (COT_BASE && COT_BASE.length) ? (aceptadas / COT_BASE.length * 100).toFixed(1) : '0.0';
+  $('#badgeConv').textContent = 'Conversión: ' + conversion + '%';
+  chartStatus && chartStatus.destroy();
+  chartStatus = new Chart(document.getElementById('chartCotStatus').getContext('2d'), { type:'bar', data:{ labels, datasets:[{ label:'Cotizaciones por estado', data:values }] }, options:{ responsive:true } });
+  const sumByState = {}; (COT_BASE||[]).forEach(c=>{ const s=c['Estado']||c['estado']||'Pendiente'; const imp=Number(c['Importe']||c['importe']||c['Monto']||0); sumByState[s]=(sumByState[s]||0)+imp; });
+  const labels2 = Object.keys(sumByState); const values2 = labels2.map(l=> sumByState[l]);
+  chartMonto && chartMonto.destroy();
+  chartMonto = new Chart(document.getElementById('chartCotMonto').getContext('2d'), { type:'bar', data:{ labels:labels2, datasets:[{ label:'Importe total por estado de cotización', data:values2 }] }, options:{ responsive:true } });
+  if(!map){ map=L.map('map').setView([23.6345,-102.5528],5); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ attribution:'' }).addTo(map); layer=L.layerGroup().addTo(map); } else { layer.clearLayers(); }
+  const medByEstado = {}; (MED_BASE||[]).forEach(m=>{ const e = m['Estado']||m['estado']||''; if(!e) return; medByEstado[e] = (medByEstado[e]||0)+1; });
+  Object.keys(medByEstado).forEach(estado=>{ const cnt=medByEstado[estado]; const coord=MX_STATES[estado]; if(coord){ const radius=Math.max(6, Math.min(30, cnt*2)); const circle=L.circleMarker(coord, { radius, weight:1 }); circle.bindPopup(`<strong>${estado}</strong><br>Médicos: ${cnt}`); layer.addLayer(circle); } });
+}
+
+/* Modal seguimiento */
+function openModal(row){ $('#modalMedico').value=row.Nombre||''; $('#modalEstado').value='Contactado'; $('#modalProxima').value=''; $('#modalComentarios').value=''; $('#modalKam').value=row.KAM||''; $('#modalBackdrop').style.display='flex'; }
+$('#cancelModal').addEventListener('click',()=> $('#modalBackdrop').style.display='none');
+$('#saveModal').addEventListener('click', async ()=>{
+  const payload={ medico:$('#modalMedico').value, fecha:new Date().toISOString(), estado:$('#modalEstado').value, proxima:$('#modalProxima').value, comentario:$('#modalComentarios').value, kam:$('#modalKam').value };
+  try{ await fetch(ENDPOINTS.seguimiento,{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'add_follow', payload }) }); alert('Seguimiento guardado'); $('#modalBackdrop').style.display='none'; }catch(e){ alert('Error: '+e.message); }
+});
+
+/* Tabs */
+$$('.tab').forEach(tab=>tab.addEventListener('click',()=>{
+  $$('.tab').forEach(t=>t.classList.remove('active')); tab.classList.add('active');
+  const id=tab.dataset.tab; $$('.tabcontent').forEach(sec=>sec.style.display=sec.id===id?'':'none');
+  if(id==='estadisticas') buildStats();
+}));
+
+(async function init(){
+  await initMedicos();
+  await initCots();
+  buildStats();
+})();
+</script>
+
+<!-- Modal Registrar Cotización -->
+<div id="modalRegCot" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); backdrop-filter:blur(4px); z-index:2000; align-items:center; justify-content:center;">
+  <div style="background:#0f1623; color:#e5e7eb; border:1px solid #1f2937; border-radius:16px; width:95%; max-width:720px; padding:18px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <h3 style="margin:0; color:#93c5fd;">Registrar nueva cotización</h3>
+      <button id="closeRegCot" class="btn ghost" style="background:#0d1117;">Cerrar</button>
+    </div>
+    <form id="formRegCot" style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px;">
+      <input name="FECHA" placeholder="FECHA" required style="background:#0d1117; border:1px solid #1f2937; color:#e5e7eb; padding:8px; border-radius:10px;">
+      <input name="MEDICO" placeholder="MEDICO" required style="background:#0d1117; border:1px solid #1f2937; color:#e5e7eb; padding:8px; border-radius:10px;">
+      <input name="KAM" placeholder="KAM" required style="background:#0d1117; border:1px solid #1f2937; color:#e5e7eb; padding:8px; border-radius:10px;">
+      <input name="R0 DE INFU" placeholder="R0 DE INFU" required style="background:#0d1117; border:1px solid #1f2937; color:#e5e7eb; padding:8px; border-radius:10px;">
+      <input name="PACIENTE" placeholder="PACIENTE" required style="background:#0d1117; border:1px solid #1f2937; color:#e5e7eb; padding:8px; border-radius:10px;">
+      <input name="PAGO" placeholder="PAGO" required style="background:#0d1117; border:1px solid #1f2937; color:#e5e7eb; padding:8px; border-radius:10px;">
+      <input name="STATUS" placeholder="STATUS" style="background:#0d1117; border:1px solid #1f2937; color:#e5e7eb; padding:8px; border-radius:10px;">
+      <input name="ESQUEMA" placeholder="ESQUEMA" style="background:#0d1117; border:1px solid #1f2937; color:#e5e7eb; padding:8px; border-radius:10px;">
+      <input name="VALOR" placeholder="VALOR (ej. 35972.47)" style="background:#0d1117; border:1px solid #1f2937; color:#e5e7eb; padding:8px; border-radius:10px;">
+      <input name="CONFIRMADO" placeholder="CONFIRMADO" style="background:#0d1117; border:1px solid #1f2937; color:#e5e7eb; padding:8px; border-radius:10px;">
+      <div style="grid-column:1/-1; display:flex; justify-content:flex-end; gap:8px; margin-top:6px;">
+        <button type="button" id="cancelRegCot" class="btn ghost">Cancelar</button>
+        <button type="submit" class="btn">Guardar cotización</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+(function(){
+  const modal = document.getElementById('modalRegCot');
+  const openBtn = document.getElementById('openRegCot');
+  const closeBtn = document.getElementById('closeRegCot');
+  const cancelBtn = document.getElementById('cancelRegCot');
+  const form = document.getElementById('formRegCot');
+  if(openBtn){ openBtn.addEventListener('click', ()=>{ modal.style.display='flex'; }); }
+  [closeBtn,cancelBtn].forEach(b=> b && b.addEventListener('click', ()=>{ modal.style.display='none'; }));
+  if(form){
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const fd = new FormData(form); const row = {};
+      fd.forEach((v,k)=> row[k]= (''+v).trim());
+      // store locally so mergeLocalAdditions lo retoma
+      try{
+        const key='cotizaciones_local_add';
+        const cur = JSON.parse(localStorage.getItem(key) || '[]');
+        cur.push(row);
+        localStorage.setItem(key, JSON.stringify(cur));
+      }catch(e){ console.warn('No se pudo escribir en localStorage', e); }
+      // actualiza en memoria y UI
+      if(typeof COT_BASE!=='undefined'){ COT_BASE.push(row); }
+      if(typeof applyCotFilters==='function'){ applyCotFilters(); } else if (typeof renderCotizaciones==='function'){ renderCotizaciones(); }
+      alert('Cotización guardada con éxito');
+      modal.style.display='none';
+      form.reset();
+      // Hook opcional de Google Sheets (si existe)
+      if(window.ENDPOINTS && ENDPOINTS.cotizaciones){
+        try{
+          await fetch(ENDPOINTS.cotizaciones, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(row) });
+        }catch(err){ console.warn('No se pudo sincronizar con Google Sheets en este momento.', err); }
+      }
+    });
+  }
+})();
+</script>
+
+</body>
+</html>

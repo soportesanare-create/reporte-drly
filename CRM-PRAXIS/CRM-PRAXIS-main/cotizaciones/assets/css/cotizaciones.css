@@ -1,0 +1,22 @@
+:root{--bg:#0c111a;--card:#121a26;--muted:#7c8aa0;--text:#ecf2ff;--accent:#7ad1ff;--ok:#27e46b}
+html,body{margin:0;background:linear-gradient(180deg,var(--bg),#0f1520);color:var(--text);font-family:system-ui,Segoe UI,Roboto}
+.container{max-width:100%;padding:16px}
+.head{display:flex;gap:8px;align-items:center}
+h1{margin:0;font-size:22px}.live{color:var(--ok);font-weight:700}
+.filters{margin:12px 0;padding:10px;background:#0f1622;border:1px solid #1e293b;border-radius:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.filters input,.filters button, .filters select{padding:8px 10px;border-radius:10px;border:1px solid #243249;background:#0d1420;color:#eaf1ff}
+.filters .spacer{flex:1}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{padding:6px 10px;border-radius:999px;border:1px solid #243249;background:#0d1420;color:#eaf1ff;cursor:pointer}
+.chip.active{background:#16324d;border-color:#2b4b70}
+.pager{display:flex;align-items:center;gap:8px}
+.pager button{padding:6px 10px;border-radius:8px;border:1px solid #243249;background:#0d1420;color:#eaf1ff;cursor:pointer}
+.wide-scroll{overflow:auto}
+.table-wide{min-width:1200px;border-collapse:separate;border-spacing:0 10px;width:100%}
+.table-wide thead th{font-size:12px;color:#8ea1ba;text-align:left;padding:6px 8px}
+.table-wide tbody tr{background:#0f1622;border:1px solid #1e293b}
+.table-wide tbody td{padding:8px 8px;vertical-align:top}
+.edit{background:#0d1420;color:#eaf1ff;border:1px solid #243249;border-radius:8px;padding:6px 8px;width:100%}
+.nowrap{white-space:nowrap}
+.align-right{text-align:right}
+.muted{color:#8ea1ba;text-align:center}

@@ -1,0 +1,25 @@
+<!-- snippet.html: ejemplo de wiring mínimo -->
+<table class="table">
+  <thead>
+    <tr>
+      <th>Nombre</th><th>Teléfono</th><th>Dirección</th><th>Hospital</th>
+      <th>Red</th><th>Especialidad</th><th>Base</th><th>Estado</th><th>Región</th><th>KAM</th><th>Seguimiento</th>
+    </tr>
+  </thead>
+  <tbody id="tbodyMedicos"></tbody>
+</table>
+<div class="badges">
+  <span id="countTotal"></span> · <span id="countFiltrados"></span>
+</div>
+
+<script type="module">
+  import { initRealtimeMedicos } from "./assets/js/realtime_medicos_v2.js";
+  const firebaseConfig = window.FIREBASE_CONFIG || {};
+  await initRealtimeMedicos({
+    firebaseConfig,
+    tableBody: "#tbodyMedicos",
+    badgeTotal: "#countTotal",
+    badgeFiltered: "#countFiltrados",
+    listenMode: "collectionGroup"
+  });
+</script>

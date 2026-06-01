@@ -1,0 +1,1797 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CRM INNVIDA — Dinámico v3 (híbrido)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <style>
+    :root{ --azul:#0A497B; --bg:#0d1117; --card:#0f1623; --muted:#94a3b8; --text:#e5e7eb; --line:#1f2937; }
+    *{ box-sizing:border-box } body{ margin:0; font-family:Inter,system-ui,Segoe UI,Arial; background:#0d1117; color:var(--text); }
+    header{ display:flex; align-items:center; gap:16px; padding:18px 22px; border-bottom:1px solid var(--line); position:sticky; top:0; background:#0d1117; z-index:10; }
+    header img{ height:56px; } header h1{ margin:0; font-size:18px; color:#e2e8f0; letter-spacing:.3px; }
+    a.link{ color:#93c5fd; text-decoration:none } a.link:hover{text-decoration:underline}
+    .container{ max-width:1300px; margin:16px auto; padding:16px; }
+    .tabs{ display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap }
+    .tab{ padding:8px 14px; background:#0f1623; border:1px solid var(--line); border-radius:10px; cursor:pointer; color:#93c5fd; font-weight:600; }
+    .tab.active{ background:linear-gradient(180deg,#0A497B,#08385f); color:white; border-color:#0A497B; box-shadow:0 8px 28px rgba(10,73,123,.25) }
+    .card{ background:#0f1623; border:1px solid var(--line); border-radius:12px; padding:14px; box-shadow:0 12px 40px rgba(2,6,23,.35); margin-bottom:16px; }
+    .muted{ color:var(--muted); font-size:13px; } .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center }
+    .btn{ padding:8px 12px; border-radius:10px; border:1px solid var(--line); background:#0A497B; color:white; cursor:pointer; font-weight:600; }
+    .btn.ghost{ background:transparent; color:#93c5fd; }
+    input, select{ padding:8px 10px; border-radius:8px; border:1px solid #243041; background:#0b1220; color:#e5e7eb; }
+    table{ width:100%; border-collapse:collapse; font-size:14px; } thead th{ text-align:left; padding:10px 8px; color:#a5b4fc; font-weight:600; font-size:12.5px; border-bottom:1px solid #1e293b; position:sticky; top:0; background:#0f1623; }
+    tbody td{ padding:8px; border-top:1px solid #1e293b; vertical-align:middle; color:#e5e7eb; } tbody tr:hover{ background:#0b1220 }
+    .center{text-align:center} .scroll{ overflow:auto; max-height:540px; }
+    .badge{ font-size:11px; padding:4px 8px; border-radius:999px; border:1px solid var(--line); background:#0b1220; color:#cbd5e1 }
+    .right{ margin-left:auto }
+    #map{ height:480px; border-radius:12px; border:1px solid var(--line); }
+  
+/* semáforo */
+.dot{display:inline-block;width:10px;height:10px;border-radius:999px;margin-right:6px;border:1px solid #1f2937}
+.dot.green{background:#16a34a}
+.dot.yellow{background:#eab308}
+.dot.red{background:#ef4444}
+.dot.gray{background:#64748b}
+
+/* === Panel lateral de historial === */
+#histPanel{
+  position:fixed;
+  top:0; right:0; height:100%;
+  width:360px; background:#0f1623;
+  border-left:1px solid #1e293b;
+  box-shadow:-8px 0 25px rgba(0,0,0,.45);
+  color:#e5e7eb; padding:18px;
+  overflow-y:auto; z-index:3000;
+  display:none; flex-direction:column;
+  animation:fadeIn .3s ease;
+}
+#histPanel h3{margin:0 0 10px 0;color:#93c5fd;}
+#histPanel .item{padding:8px 6px;border-bottom:1px solid #1e293b;opacity:0;animation:fadeItem .4s forwards;}
+#histPanel .dot{display:inline-block;width:10px;height:10px;border-radius:999px;margin-right:6px;}
+#histPanel .dot.green{background:#16a34a}
+#histPanel .dot.yellow{background:#eab308}
+#histPanel .dot.red{background:#ef4444}
+#histPanel .dot.gray{background:#64748b}
+@keyframes fadeIn{from{opacity:0;transform:translateX(20px);}to{opacity:1;transform:translateX(0);}}
+@keyframes fadeItem{to{opacity:1;}}
+
+    /* --- Login Overlay (no modifica nada del CRM, solo lo cubre al inicio) --- */
+    .login-overlay{
+      position:fixed;
+      inset:0;
+      background:rgba(15,23,42,.92);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      z-index:200000;
+      backdrop-filter:blur(4px);
+    }
+    .login-card{
+      background:#020617;
+      border-radius:18px;
+      padding:24px 28px;
+      box-shadow:0 24px 60px rgba(0,0,0,.8);
+      width:100%;
+      max-width:360px;
+      border:1px solid #1e293b;
+    }
+    .login-card h2{
+      margin:0 0 6px;
+      font-size:20px;
+      text-align:center;
+      color:#e5e7eb;
+    }
+    .login-subtitle{
+      margin:0 0 18px;
+      font-size:13px;
+      text-align:center;
+      color:#9ca3af;
+    }
+    .login-field{
+      margin-bottom:14px;
+    }
+    .login-field label{
+      display:block;
+      font-size:12px;
+      margin-bottom:4px;
+      color:#cbd5f5;
+    }
+    .login-field input{
+      width:100%;
+      padding:8px 10px;
+      border-radius:10px;
+      border:1px solid #1e293b;
+      background:#020617;
+      color:#e5e7eb;
+      outline:none;
+    }
+    .login-field input:focus{
+      border-color:#38bdf8;
+      box-shadow:0 0 0 1px rgba(56,189,248,.45);
+    }
+    .login-actions{
+      margin-top:4px;
+      display:flex;
+      justify-content:flex-end;
+      gap:8px;
+    }
+    #loginBtn{
+      padding:8px 16px;
+      border-radius:999px;
+      border:none;
+      background:linear-gradient(135deg,#0ea5e9,#22c55e);
+      color:#f9fafb;
+      font-weight:600;
+      cursor:pointer;
+      font-size:13px;
+    }
+    #loginBtn:hover{
+      filter:brightness(1.05);
+    }
+    .login-error{
+      margin-top:10px;
+      font-size:12px;
+      text-align:center;
+      color:#f97373;
+    }
+</style>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <style>
+    /* Sección Estadísticas / Mapa */
+    #estadisticas-mapa{padding:1rem;}
+    .stats-grid{display:grid;grid-template-columns:1fr;gap:1rem;}
+    @media (min-width: 900px){.stats-grid{grid-template-columns:1.2fr 1fr;}}
+    #mapaMX{width:100%;height:420px;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.08);}
+    .card{background:#fff;border-radius:12px;padding:1rem;box-shadow:0 2px 10px rgba(0,0,0,.06);}
+    .card h3{margin:0 0 .5rem 0;font-weight:600;}
+    canvas{width:100% !important;height:320px !important;}
+  </style>
+
+<style>
+  body, html {
+    background-color: #0B1A2A !important;
+    color: #E0E0E0 !important;
+  }
+  .card, .container, .section, div, form, input, select, textarea, table, th, td {
+    background-color: #0B1A2A !important;
+    color: #E0E0E0 !important;
+    border-color: #1E2D3C !important;
+  }
+  button, .btn {
+    background-color: #0A497B !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  }
+  button:hover, .btn:hover {
+    background-color: #1265A8 !important;
+  }
+  h1, h2, h3, h4, h5, h6, label, p, span {
+    color: #E0E0E0 !important;
+  }
+  canvas {
+    background-color: #0B1A2A !important;
+  }
+  #mapaMX {
+    background-color: #0B1A2A !important;
+  }
+  input, select, textarea {
+    background-color: #112238 !important;
+    color: #E0E0E0 !important;
+  }
+</style>
+
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<link rel="stylesheet" href="assets/css/patch_hide_delete.css?v=1">
+</head>
+<body>
+  <!-- Capa de login: bloquea todo hasta que se ingrese usuario/contraseña -->
+  <div id="loginOverlay" class="login-overlay">
+    <div class="login-card">
+      <h2>Acceso CRM INNVIDA</h2>
+      <p class="login-subtitle">Ingresa tu usuario y contraseña para continuar.</p>
+      <div class="login-field">
+        <label for="loginUser">Usuario</label>
+        <input id="loginUser" type="text" autocomplete="off" />
+      </div>
+      <div class="login-field">
+        <label for="loginPass">Contraseña</label>
+        <input id="loginPass" type="password" />
+      </div>
+      <div class="login-actions">
+        <button id="loginBtn" type="button">Entrar</button>
+      </div>
+      <p id="loginError" class="login-error" style="display:none;">Usuario o contraseña incorrectos.</p>
+    </div>
+  </div>
+
+  <header>
+    <img src="logo.png" alt="INNVIDA">
+    <h1>CRM · INNVIDA — v3 Firestore</h1>
+    <div class="right"><a class="link" href="registrar.html">➕ Registrar</a></div>
+  </header>
+
+  <main class="container">
+    <div class="tabs" id="tabs">
+      <div class="tab active" data-tab="medicos">Médicos</div>
+      <div class="tab" data-tab="cotizaciones" style="display:none;">Cotizaciones</div>
+      <div class="tab" data-tab="estadisticas" style="display:none;">Estadísticas & Mapa</div>
+    </div>
+
+    <!-- MÉDICOS -->
+    <section id="medicos" class="tabcontent">
+      <div class="card row">
+        <div><strong>Base de Médicos</strong><div class="muted">Lectura en tiempo real desde Firestore</div></div>
+        <div class="row right">
+          <span class="badge" id="medCount">—</span>
+          <button class="btn" id="refreshMedicos">Refrescar</button>
+          <button class="btn ghost" id="downloadMedCSV">CSV</button>
+          <button class="btn ghost" id="downloadMedXLSX">Excel</button>
+          <button class="btn ghost" id="downloadSegCSV">Historial (CSV)</button>
+          <button class="btn ghost" id="downloadSegXLSX">Historial (XLSX)</button>
+        </div>
+      </div>
+      <div class="card row">
+        <div class="row" style="gap:8px;">
+          <input id="qMed" placeholder="Buscar nombre, hospital o especialidad..." style="min-width:260px">
+          <select id="fEstado"><option value="">Estado (todos)</option></select>
+          <select id="fRegion"><option value="">Región (todas)</option></select>
+          <select id="fKam"><option value="">KAM (todos)</option></select>
+          <label class="muted">Página:</label>
+<select id="sortOrder" style="margin-left:12px;padding:6px 8px;border-radius:6px;"><option value="desc">Registros nuevos (descendentes)</option><option value="asc">Registros viejos (ascendentes)</option></select>
+<select id="page-size" style="margin-left:6px;padding:6px 8px;border-radius:6px;">
+  <option value="20">20</option>
+  <option value="100">100</option>
+  <option value="all">Todos</option>
+</select> </label>
+          <select id="pageSizeMed"><option>10</option><option selected>20</option><option>50</option><option>100</option></select>
+        
+        <div class="row right">
+          <button class="btn" id="btnAddMedico">+ Agregar médico</button>
+        </div>
+</div>
+      
+      
+      <div id="panelAddMedico" class="card" style="display:none; margin-top:16px; background:rgba(20,25,30,0.9); border-radius:18px; padding:24px; box-shadow:0 4px 12px rgba(0,0,0,0.4);">
+        <h3 style="margin-top:0; color:#fff;">Registrar nuevo médico</h3>
+        <div class="grid" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:18px; margin-top:16px;">
+          <div class="field"><label>Nombre</label><input id="m_nombre" required style="padding:10px;border-radius:10px;border:1px solid #444;background:#111;color:#eee;width:100%;"></div>
+          <div class="field"><label>Teléfono</label><input id="m_tel" style="padding:10px;border-radius:10px;border:1px solid #444;background:#111;color:#eee;width:100%;"></div>
+          <div class="field"><label>Dirección</label><input id="m_dir" style="padding:10px;border-radius:10px;border:1px solid #444;background:#111;color:#eee;width:100%;"></div>
+          <div class="field"><label>Hospital</label><input id="m_hosp" style="padding:10px;border-radius:10px;border:1px solid #444;background:#111;color:#eee;width:100%;"></div>
+          <div class="field"><label>Red Social</label><input id="m_red" style="padding:10px;border-radius:10px;border:1px solid #444;background:#111;color:#eee;width:100%;"></div>
+          <div class="field"><label>Especialidad</label><input id="m_esp" style="padding:10px;border-radius:10px;border:1px solid #444;background:#111;color:#eee;width:100%;"></div>
+          <div class="field"><label>Estado</label><input id="m_estado" style="padding:10px;border-radius:10px;border:1px solid #444;background:#111;color:#eee;width:100%;"></div>
+          <div class="field"><label>Región</label><input id="m_region" style="padding:10px;border-radius:10px;border:1px solid #444;background:#111;color:#eee;width:100%;"></div>
+          <div class="field"><label>Gerente / KAM</label><input id="m_kam" style="padding:10px;border-radius:10px;border:1px solid #444;background:#111;color:#eee;width:100%;"></div>
+          <div class="field"><label>Base</label><input id="m_base" placeholder="Fuente o campaña" style="padding:10px;border-radius:10px;border:1px solid #444;background:#111;color:#eee;width:100%;"></div>
+        <div class="actions" style="margin-top:20px; display:flex; justify-content:flex-end; gap:12px;">
+          <button class="btn ghost" id="btnClearMed" style="background:#333;color:#eee;">Limpiar</button>
+          <button class="btn" id="btnSaveMed" style="background:#0078ff;color:#fff;">Guardar médico</button>
+          <button class="btn ghost" id="btnCloseMed" style="background:#333;color:#eee;">Cerrar</button>
+        </div>
+        </div>
+        <div class="actions" style="margin-top:20px; display:flex; justify-content:flex-end; gap:12px;">
+          
+        </div>
+      </div>
+    
+        <div class="actions" style="margin-top:8px; display:flex; gap:8px; justify-content:flex-end;">
+          
+        </div>
+      </div>
+
+      <div class="card scroll">
+        <table id="tableMedicos">
+          <thead><tr>
+            <th>Nombre</th><th>Teléfono</th><th>Dirección</th><th>Hospital</th><th>Red Social</th><th>Especialidad</th><th>Base</th><th>Estado</th><th>Región</th><th>Gerente / KAM</th><th class="center">Seguimiento</th>
+          </tr></thead>
+          <tbody id="tbody-medicos"></tbody>
+        </table>
+      </div>
+      <div class="row" style="justify-content:flex-end;">
+        <span class="badge" id="pageInfoMed">—</span>
+        <button class="btn ghost" id="prevMed">Anterior</button>
+        <button class="btn ghost" id="nextMed">Siguiente</button>
+      </div>
+    </section>
+
+    <!-- COTIZACIONES -->
+    <section id="cotizaciones" class="tabcontent" style="display:none;">
+      <div class="card row">
+        <div><strong>Cotizaciones</strong><div class="muted">Lectura desde cotizaciones.json (y añadidos locales)</div></div>
+        <div class="row right">
+          <span class="badge" id="cotCount">—</span>
+          <button class="btn" id="refreshCots">Refrescar</button>
+          <button class="btn ghost" id="downloadCotCSV">CSV</button>
+          <button class="btn ghost" id="downloadCotXLSX">Excel</button>
+          <button class="btn" id="openRegCot">Registrar</button>
+        </div>
+      </div>
+      <div class="card row">
+        <div class="row" style="gap:8px;">
+          <input id="qCot" placeholder="Buscar en todas las columnas..." style="min-width:260px">
+          <select id="fEstadoCot"><option value="">Estado (todos)</option></select>
+          <label class="muted">Página: </label>
+          <select id="pageSizeCot"><option>10</option><option selected>20</option><option>50</option><option>100</option></select>
+        </div>
+      </div>
+      <div class="card scroll">
+        <table id="tableCots">
+          <thead><tr><th>#</th><th>FECHA</th><th>MEDICO</th><th>KAM</th><th>R0 DE INFU</th><th>PACIENTE</th><th>PAGO</th><th>STATUS</th><th>ESQUEMA</th><th>VALOR</th><th>CONFIRMADO</th><th>MOTIVO</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="row" style="justify-content:flex-end;">
+        <span class="badge" id="pageInfoCot">—</span>
+        <button class="btn ghost" id="prevCot">Anterior</button>
+        <button class="btn ghost" id="nextCot">Siguiente</button>
+      </div>
+    </section>
+
+    <!-- ESTADISTICAS & MAPA -->
+    
+<section id="seguimientoKAM" class="tabcontent" style="display:none;">
+  <div class="card">
+    <div class="row">
+      <div>
+        <strong>Seguimiento KAM</strong>
+        <div class="muted">Guardado 100% local (sin Google Sheets). Exporta CSV/XLSX cuando lo necesites.</div>
+      </div>
+      <div class="row right">
+        <button class="btn" id="nuevoSeg">+ Nuevo Seguimiento</button>
+        <button class="btn ghost" id="segCSV">CSV</button>
+        <button class="btn ghost" id="segXLSX">XLSX</button>
+        <button class="btn ghost" id="segClear">Limpiar</button>
+      </div>
+    </div>
+  </div>
+  <div class="card scroll">
+    <table id="segTable">
+      <thead>
+        <tr>
+          <th>Médico</th>
+          <th>Estado</th>
+          <th>Fecha</th>
+          <th>Próxima acción</th>
+          <th>Comentarios</th>
+          <th>KAM</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<section id="estadisticas" class="tabcontent" style="display:none;">
+      <div class="card row">
+        <div><strong>Panel</strong><div class="muted">Totales, conversión, estados y mapa por Estado</div></div>
+        <div style="display:flex; gap:8px;">
+          <div class="badge" id="badgeMed">—</div>
+          <div class="badge" id="badgeCot">—</div>
+          <div class="badge" id="badgeConv">—</div>
+        </div>
+      </div>
+      <div class="card" style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+        <canvas id="chartCotStatus" height="220"></canvas>
+        <canvas id="chartCotMonto" height="220"></canvas>
+      </div>
+      <div class="card">
+        <div id="map"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal seguimiento (solo Médicos) -->
+  <div id="modalBackdrop" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);">
+    <div style="width:720px;max-width:95%;background:#0f1623;border:1px solid #1f2937;border-radius:12px;padding:14px;">
+      <h3 style="margin:0 0 8px 0;">Seguimiento</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="field"><label class="muted">Médico</label><input id="modalMedico" disabled style="padding:8px;border-radius:8px;border:1px solid #243041;background:#0b1220;color:#e5e7eb;"></div>
+        <div class="field"><label class="muted">Estado</label>
+          <select id="modalEstado" style="padding:8px;border-radius:8px;border:1px solid #243041;background:#0b1220;color:#e5e7eb;">
+            <option>Contactado</option><option>Cita programada</option><option>Negociación</option><option>Cerrado</option><option>Sin respuesta</option>
+          </select>
+        </div>
+        <div class="field"><label class="muted">Próxima acción / Fecha de visita</label><input id="modalProxima" type="date" style="padding:8px;border-radius:8px;border:1px solid #243041;background:#0b1220;color:#e5e7eb;"></div>
+        <div class="field" style="grid-column:1/-1;"><label class="muted">Comentarios</label><textarea id="modalComentarios" rows="3" style="padding:8px;border-radius:8px;border:1px solid #243041;background:#0b1220;color:#e5e7eb;"></textarea></div>
+        <div class="field" style="grid-column:1/-1;"><label class="muted">KAM / Gerente</label><input id="modalKam" style="padding:8px;border-radius:8px;border:1px solid #243041;background:#0b1220;color:#e5e7eb;"></div>
+      </div>
+      <div class="row" style="justify-content:flex-end;margin-top:12px;">
+        <button class="btn ghost" id="cancelModal">Cancelar</button><button class="btn" id="saveModal">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+const SEGUIMIENTO_CSV_URL = '';
+const ENDPOINTS={ medicos:'https://script.google.com/macros/s/AKfycbytb0owLgVmonULxQCiACdmAgcaISGBsmnes7NB0H9p8dxBr_DnW25AZs-pQYitK0M/exec', seguimiento:'https://script.google.com/macros/s/AKfycbyYfyO0dbqOk_O4x6-pkk8oCPVBfUsfbKtzpsXRpThsxhXHSO2s97mwwYUpY4s2DuA/exec' };
+const $=s=>document.querySelector(s); const $$=s=>Array.from(document.querySelectorAll(s));
+const money=v=>new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN'}).format(Number(v)||0);
+const MX_STATES = {"Aguascalientes":[21.8853,-102.2916],"Baja California":[30.8406,-115.2838],"Baja California Sur":[26.0444,-111.6661],"Campeche":[18.8048,-90.5255],"Coahuila":[27.0587,-101.7068],"Colima":[19.2452,-103.7241],"Chiapas":[16.7569,-93.1292],"Chihuahua":[28.6320,-106.0691],"Ciudad de México":[19.4326,-99.1332],"Durango":[24.0277,-104.6532],"Guanajuato":[21.0190,-101.2574],"Guerrero":[17.4392,-99.5451],"Hidalgo":[20.1011,-98.7624],"Jalisco":[20.6597,-103.3496],"México":[19.2921,-99.6557],"Michoacán":[19.5665,-101.7068],"Morelos":[18.6813,-99.1013],"Nayarit":[21.7514,-104.8455],"Nuevo León":[25.5922,-99.9962],"Oaxaca":[17.0732,-96.7266],"Puebla":[19.0414,-98.2063],"Querétaro":[20.5888,-100.3899],"Quintana Roo":[19.1817,-88.4791],"San Luis Potosí":[22.1565,-100.9855],"Sinaloa":[24.8091,-107.3940],"Sonora":[29.2972,-110.3309],"Tabasco":[17.8409,-92.6189],"Tamaulipas":[24.2669,-98.8363],"Tlaxcala":[19.3182,-98.2375],"Veracruz":[19.1738,-96.1342],"Yucatán":[20.7099,-89.0943],"Zacatecas":[22.7709,-102.5832]};
+
+let MED_BASE=[], COT_BASE=[];
+
+async function loadJSON(path){ const r=await fetch(path+'?v='+(Date.now())); return await r.json(); }
+function mergeLocalAdditions(baseArr, key){ const local=JSON.parse(localStorage.getItem(key)||'[]'); return baseArr.concat(local); }
+
+/* MÉDICOS */
+let MED_FILT=[]; let medPage=1; let medSize=20;
+const tbMed=$('#tableMedicos tbody'); const pageInfoMed=$('#pageInfoMed');
+const qMed=$('#qMed'), fEstado=$('#fEstado'), fRegion=$('#fRegion'), fKam=$('#fKam'), pageSelMed=$('#pageSizeMed');
+function distinct(arr){ return Array.from(new Set(arr.filter(Boolean))).sort((a,b)=>(''+a).localeCompare((''+b),'es',{sensitivity:'base'})); }
+async function initMedicos(){
+  const raw = await loadJSON('medicos.json');
+  MED_BASE = mergeLocalAdditions(raw, 'medicos_local_add');
+  $('#medCount').textContent = MED_BASE.length+' médicos';
+  fEstado.innerHTML = '<option value="">Estado (todos)</option>' + distinct(MED_BASE.map(r=> r['Estado']||r['estado']||'')).map(v=> `<option>${v}</option>`).join('');
+  fRegion.innerHTML = '<option value="">Región (todas)</option>' + distinct(MED_BASE.map(r=> r['Región']||r['Region']||r['region']||'' )).map(v=> `<option>${v}</option>`).join('');
+  fKam.innerHTML = '<option value="">KAM (todos)</option>' + distinct(MED_BASE.map(r=> r['GERENTE/KAM']||r['KAM']||r['kam']||'' )).map(v=> `<option>${v}</option>`).join('');
+  applyMedFilters();
+}
+function applyMedFilters(){
+  const q=(qMed.value||'').toLowerCase();
+  const est=fEstado.value||''; const reg=fRegion.value||''; const kam=fKam.value||'';
+  MED_FILT = (MED_BASE||[]).filter(r=>{
+    const name=(r['Nombre']||r['nombre']||'').toLowerCase();
+    const hosp=(r['Hospital']||r['hospital']||'').toLowerCase();
+    const esp=(r['Especialidad']||r['especialidad']||'').toLowerCase();
+    const okQ = q ? (name.includes(q)||hosp.includes(q)||esp.includes(q)) : true;
+    const okE = est ? ((r['Estado']||r['estado']||'')===est) : true;
+    const okR = reg ? ((r['Región']||r['Region']||r['region']||'')===reg) : true;
+    const okK = kam ? ((r['GERENTE/KAM']||r['KAM']||r['kam']||'')===kam) : true;
+    return okQ && okE && okR && okK;
+  });
+  medPage=1; renderMedicos();
+}
+function renderMedicos(){
+  tbMed.innerHTML='';
+  medSize=parseInt(pageSelMed.value||'20',10);
+  const total=MED_FILT.length, pages=Math.max(1,Math.ceil(total/medSize));
+  if(medPage>pages) medPage=pages;
+  const start=(medPage-1)*medSize; const slice=MED_FILT.slice(start,start+medSize);
+  if(!slice.length){ tbMed.innerHTML='<tr><td colspan="11" class="muted">Sin resultados</td></tr>'; }
+  slice.forEach(r=>{
+    const tr=document.createElement('tr');
+    const nombre=r['Nombre']||r['nombre']||''; const tel=r['Teléfono']||r['Telefono']||r['telefono']||''; const dir=r['Dirección']||r['Direccion']||r['direccion']||'';
+    tr.innerHTML=`
+      <td>${nombre}</td><td>${tel}</td><td>${dir}</td>
+      <td>${r['Hospital']||r['hospital']||''}</td><td>${r['Red Social']||r['red']||''}</td><td>${r['Especialidad']||r['especialidad']||''}</td>
+      <td>${r['Base']||r['base']||''}</td><td>${r['Estado']||r['estado']||''}</td><td>${r['Región']||r['Region']||r['region']||''}</td><td>${r['GERENTE/KAM']||r['KAM']||r['kam']||''}</td>
+      <td class="center">
+        <span class="dot ${(()=>{ const est=latestEstadoFor(nombre); return est?estadoColor(est):'gray'; })()}"></span>
+        <button class="btn btn-seg" data-id="" data-action="seguimiento" data-nombre="${nombre}" data-direccion="${dir}">+ Seguimiento</button>
+      </td>`;
+    tr.querySelector('button').addEventListener('click',()=> openModal({Nombre:nombre, KAM:(r['GERENTE/KAM']||r['KAM']||r['kam']||'')}));
+    tbMed.appendChild(tr);
+  });
+  pageInfoMed.textContent = `Mostrando ${slice.length} de ${total} — Página ${medPage}/${Math.max(1,Math.ceil(total/medSize))}`;
+}
+$('#prevMed').addEventListener('click',()=>{ if(medPage>1){ medPage--; renderMedicos(); } });
+$('#nextMed').addEventListener('click',()=>{ const pages=Math.max(1,Math.ceil(MED_FILT.length/medSize)); if(medPage<pages){ medPage++; renderMedicos(); } });
+[qMed,fEstado,fRegion,fKam].forEach(el=> el.addEventListener('input', applyMedFilters));
+pageSelMed.addEventListener('change', renderMedicos);
+$('#refreshMedicos').addEventListener('click', initMedicos);
+function downloadCSV(filename, rows){
+  if(!rows.length) return alert('Sin datos');
+  const keys=Object.keys(rows[0]); const csv=[keys.join(',')].concat(rows.map(r=>keys.map(k=>`"${(r[k]||'').toString().replace(/"/g,'""')}"`).join(','))).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url);
+}
+$('#downloadMedCSV').addEventListener('click', ()=> downloadCSV('medicos.csv', MED_BASE))
+$('#downloadSegCSV').addEventListener('click', exportSeguimientoCSV);
+function downloadXLSX(filename, rows){
+  if(!rows.length) return alert('Sin datos');
+  const wb=XLSX.utils.book_new(); const ws=XLSX.utils.json_to_sheet(rows); XLSX.utils.book_append_sheet(wb, ws, 'Datos'); XLSX.writeFile(wb, filename);
+}
+$('#downloadMedXLSX').addEventListener('click', ()=> downloadXLSX('medicos.xlsx', MED_BASE));
+
+/* COTIZACIONES */
+let COT_FILT=[]; let cotPage=1; let cotSize=20;
+const tbCots=$('#tableCots tbody'); const pageInfoCot=$('#pageInfoCot');
+const qCot=$('#qCot'), fEstadoCot=$('#fEstadoCot'), pageSelCot=$('#pageSizeCot');
+async function initCots(){
+  const raw = await loadJSON('cotizaciones.json');
+  COT_BASE = mergeLocalAdditions(raw, 'cotizaciones_local_add');
+  $('#cotCount').textContent = COT_BASE.length+' cotizaciones';
+  const estados = distinct(COT_BASE.map(r=> r['STATUS'] || r['Status'] || r['status'] || 'Pendiente'));
+  fEstadoCot.innerHTML = '<option value="">Estado (todos)</option>' + estados.map(v=>`<option>${v}</option>`).join('');
+  applyCotFilters();
+}
+
+function applyCotFilters(){
+  const q=(qCot.value||'').toLowerCase(); const est=fEstadoCot.value||'';
+  COT_FILT = (COT_BASE||[]).filter(r=>{
+    const any = ['FECHA','MEDICO','KAM','R0 DE INFU','PACIENTE','PAGO','STATUS','ESQUEMA','VALOR','CONFIRMADO','MOTIVO']
+      .some(k => ((r[k]||'')+'').toLowerCase().includes(q));
+    const byStatus = !est || (r['STATUS']||r['Status']||r['status']||'')===est;
+    return any && byStatus;
+  });
+  cotPage=1;
+  renderCotizaciones();
+}
+
+
+function renderCotizaciones(){
+  tbCots.innerHTML='';
+  cotSize=parseInt(pageSelCot.value||'20',10);
+  const total=COT_FILT.length, pages=Math.max(1,Math.ceil(total/cotSize));
+  if(cotPage>pages) cotPage=pages;
+  const start=(cotPage-1)*cotSize; const slice=COT_FILT.slice(start,start+cotSize);
+  if(!slice.length){ tbCots.innerHTML='<tr><td colspan="11" class="muted">Sin resultados</td></tr>'; }
+  slice.forEach((r,i)=>{
+    const idx=start+i;
+    const tr=document.createElement('tr');
+    const VAL = (r['VALOR']||'').toString();
+    tr.innerHTML=`<td>${idx+1}</td>
+      <td>${r['FECHA']||''}</td>
+      <td>${r['MEDICO']||''}</td>
+      <td>${r['KAM']||''}</td>
+      <td>${r['R0 DE INFU']||r['RO DE INFU']||''}</td>
+      <td>${r['PACIENTE']||''}</td>
+      <td>${r['PAGO']||''}</td>
+      <td>${r['STATUS']||''}</td>
+      <td>${r['ESQUEMA']||''}</td>
+      <td>${(function(v){ 
+      if(v==null) return '$0.00'; 
+      v = (''+v).replace(/[^0-9.,-]/g,'').replace(/,/g,''); 
+      var n = parseFloat(v||'0'); 
+      return isNaN(n) ? (''+v) : ('$' + n.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})); 
+    })(VAL)}</td>
+      <td>${r['CONFIRMADO']||''}</td>`;
+    tr.innerHTML += `<td title="${(r['MOTIVO']||'').toString().replace(/"/g,'&quot;')}">${(r['MOTIVO']||'').toString().length>60 ? (r['MOTIVO'].toString().slice(0,60)+'…') : (r['MOTIVO']||'')}</td>`;
+    tbCots.appendChild(tr);
+  });
+  pageInfoCot.textContent = `Mostrando ${slice.length} de ${total} — Página ${cotPage}/${Math.max(1,Math.ceil(total/cotSize))}`;
+}
+
+$('#prevCot').addEventListener('click',()=>{ if(cotPage>1){ cotPage-=1; renderCotizaciones(); } });
+$('#nextCot').addEventListener('click',()=>{ const pages=Math.max(1,Math.ceil(COT_FILT.length/cotSize)); if(cotPage<pages){ cotPage+=1; renderCotizaciones(); } });
+[qCot,fEstadoCot].forEach(el=> el.addEventListener('input', applyCotFilters));
+pageSelCot.addEventListener('change', renderCotizaciones);
+$('#refreshCots').addEventListener('click', initCots);
+$('#downloadCotCSV').addEventListener('click', ()=> downloadCSV('cotizaciones.csv', COT_BASE));
+$('#downloadCotXLSX').addEventListener('click', ()=> downloadXLSX('cotizaciones.xlsx', COT_BASE));
+
+/* ESTADÍSTICAS & MAPA */
+let chartStatus, chartMonto, map, layer;
+function buildStats(){
+  $('#badgeMed').textContent = 'Médicos: '+(MED_BASE?MED_BASE.length:0);
+  $('#badgeCot').textContent = 'Cotizaciones: '+(COT_BASE?COT_BASE.length:0);
+  const statusCounts = {};
+  (COT_BASE||[]).forEach(c => { const s = c['Estado']||c['estado']||'Pendiente'; statusCounts[s] = (statusCounts[s]||0)+1; });
+  const labels = Object.keys(statusCounts); const values = labels.map(l=> statusCounts[l]);
+  const aceptadas = statusCounts['Aceptada'] || statusCounts['ACEPTADA'] || 0;
+  const conversion = (COT_BASE && COT_BASE.length) ? (aceptadas / COT_BASE.length * 100).toFixed(1) : '0.0';
+  $('#badgeConv').textContent = 'Conversión: ' + conversion + '%';
+  chartStatus && chartStatus.destroy();
+  chartStatus = new Chart(document.getElementById('chartCotStatus').getContext('2d'), { type:'bar', data:{ labels, datasets:[{ label:'Cotizaciones por estado', data:values }] }, options:{ responsive:true } });
+  const sumByState = {}; (COT_BASE||[]).forEach(c=>{ const s=c['Estado']||c['estado']||'Pendiente'; const imp=Number(c['Importe']||c['importe']||c['Monto']||0); sumByState[s]=(sumByState[s]||0)+imp; });
+  const labels2 = Object.keys(sumByState); const values2 = labels2.map(l=> sumByState[l]);
+  chartMonto && chartMonto.destroy();
+  chartMonto = new Chart(document.getElementById('chartCotMonto').getContext('2d'), { type:'bar', data:{ labels:labels2, datasets:[{ label:'Importe total por estado de cotización', data:values2 }] }, options:{ responsive:true } });
+  if(!map){ map=L.map('map').setView([23.6345,-102.5528],5); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ attribution:'' }).addTo(map); layer=L.layerGroup().addTo(map); } else { layer.clearLayers(); }
+  const medByEstado = {}; (MED_BASE||[]).forEach(m=>{ const e = m['Estado']||m['estado']||''; if(!e) return; medByEstado[e] = (medByEstado[e]||0)+1; });
+  Object.keys(medByEstado).forEach(estado=>{ const cnt=medByEstado[estado]; const coord=MX_STATES[estado]; if(coord){ const radius=Math.max(6, Math.min(30, cnt*2)); const circle=L.circleMarker(coord, { radius, weight:1 }); circle.bindPopup(`<strong>${estado}</strong><br>Médicos: ${cnt}`); layer.addLayer(circle); } });
+}
+
+/* Modal seguimiento */
+function openModal(row){ $('#modalMedico').value=row.Nombre||''; $('#modalEstado').value='Contactado'; $('#modalProxima').value=''; $('#modalComentarios').value=''; $('#modalKam').value=row.KAM||''; $('#modalBackdrop').style.display='flex';  showHistPanel(row.Nombre||'');}
+$('#cancelModal').addEventListener('click',()=>{ $('#modalBackdrop').style.display='none'; hideHistPanel(); });
+$('#saveModal').addEventListener('click', async ()=>{
+  const payload={ 
+    medico:$('#modalMedico').value, 
+    fecha:($('#modalProxima').value ? new Date($('#modalProxima').value).toISOString().slice(0,10) : new Date().toISOString().slice(0,10)),
+    estado:$('#modalEstado').value, 
+    proxima:$('#modalProxima').value,
+    comentario:$('#modalComentarios').value, 
+    kam:$('#modalKam').value
+  };
+  // Guardado 100% local
+  addSeguimiento(payload);
+  $('#modalBackdrop').style.display='none';
+  showToast('Guardado en Firestore ✓'); hideHistPanel();
+  // Actualiza semáforos y la tabla local
+  try{ renderMedicos(); }catch(_){}
+  try{ renderSeguimiento(); }catch(_){}
+});
+
+
+/* === Seguimiento: helpers & toast === */
+/* === Historial remoto opcional (Google Sheets CSV) ===
+   Para activar lectura real desde la hoja de Seguimiento KAM, pega aquí la URL CSV pública de tu hoja, por ejemplo:
+   SEGUIMIENTO_CSV_URL = "https://docs.google.com/spreadsheets/d/AAAAAA/gviz/tq?tqx=out:csv&gid=123456";
+*/
+async function fetchCSV(url){
+  const r = await fetch(url, {cache:'no-store'});
+  if(!r.ok) throw new Error('No se pudo leer CSV remoto');
+  const text = await r.text();
+  // Simple CSV parser
+  const lines = text.split(/\r?\n/).filter(l=>l.trim().length);
+  const rows = lines.map(line => {
+    const out=[]; let cur=''; let q=false;
+    for(let i=0;i<line.length;i++){
+      const ch=line[i];
+      if(ch==='\"'){ if(q && line[i+1]==='\"'){ cur+='\"'; i++; } else { q=!q; } }
+      else if(ch===',' && !q){ out.push(cur); cur=''; }
+      else { cur+=ch; }
+    }
+    out.push(cur);
+    return out;
+  });
+  // First row = headers
+  const headers = rows.shift().map(h=>h.trim());
+  return rows.map(r => Object.fromEntries(headers.map((h,i)=>[h, r[i]||''])));
+}
+async function loadHistMerged(){
+  const local = loadHist();
+  if(SEGUIMIENTO_CSV_URL){
+    try{
+      const remoteRows = await fetchCSV(SEGUIMIENTO_CSV_URL);
+      // Normalizamos campos esperados
+      const norm = remoteRows.map(r => ({
+        medico: r.medico||r.Medico||r.Médico||r.Doctor||'',
+        fecha: r.fecha||r.Fecha||'',
+        estado: r.estado||r.Estado||'',
+        proxima: r.proxima||r['Próxima']||r['Proxima']||'',
+        comentario: r.comentario||r.Comentario||r.Observaciones||'',
+        kam: r.kam||r.KAM||r['Gerente/KAM']||r.Gerente||''
+      }));
+      // Merge simple: concatenamos (evitamos duplicado exacto)
+      const key = x => [x.medico,x.fecha,x.estado,x.proxima,x.comentario,x.kam].join('|');
+      const seen = new Set(local.map(key));
+      for(const r of norm){ const k=key(r); if(!seen.has(k)){ local.push(r); seen.add(k); } }
+    }catch(e){ console.warn('Lectura remota falló, uso solo local:', e); }
+  }
+  return local;
+}
+function latestEstadoFor(nombre){
+  // Reimplement using merged history (local + remoto si existe)
+  const all = window.__hist_cache__ || [];
+  const arr = all.filter(x => (x.medico||'')===nombre);
+  if(!arr.length) return null;
+  // Tomamos la última (por orden de inserción en la hoja/local)
+  return arr[arr.length-1].estado || null;
+}
+async function refreshHistCache(){
+  window.__hist_cache__ = await loadHistMerged();
+  try{ renderMedicos(); }catch(_){}
+}
+function exportSeguimientoXLSX(){
+  const rows = (window.__hist_cache__||[]).slice();
+  if(!rows.length){ alert('Sin historial aún'); return; }
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Seguimiento KAM');
+  const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array'});
+  const blob = new Blob([wbout], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='seguimiento_kam_historial.xlsx'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function showToast(msg='Guardado en Firestore ✓'){
+  const box = document.getElementById('toastBox'); const t = document.getElementById('toast');
+  if(!box||!t) return;
+  t.textContent = msg;
+  box.style.display='block';
+  t.style.opacity='0';
+  requestAnimationFrame(()=>{
+    t.style.transition = 'opacity .25s ease, transform .25s ease';
+    t.style.opacity='1'; t.style.transform='translateY(0)';
+  });
+  setTimeout(()=>{ box.style.display='none'; }, 1800);
+}
+function loadHist(){ try{ return JSON.parse(localStorage.getItem('seguimiento_historial')||'[]'); }catch(_){ return []; } }
+function saveHist(entry){
+  const arr = loadHist(); arr.push(entry);
+  localStorage.setItem('seguimiento_historial', JSON.stringify(arr));
+}
+function exportSeguimientoCSV(){
+  const rows = loadHist();
+  if(!rows.length){ alert('Sin historial aún'); return; }
+  const headers = Object.keys(rows[0]);
+  const csv = [headers.join(',')]
+    .concat(rows.map(r=> headers.map(h=> `"${(r[h]??'').toString().replace(/"/g,'""')}"`).join(',')))
+    .join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='seguimiento_kam_historial.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+/* Map estado -> color */
+function estadoColor(estado){
+  const e = (estado||'').toLowerCase();
+  if(e.includes('cerrado')) return 'green';
+  if(e.includes('negoci')||e.includes('cita')) return 'yellow';
+  if(e.includes('sin respuesta')||e.includes('cancel')||e.includes('no')) return 'red';
+  if(e.includes('contact')) return 'yellow';
+  return 'gray';
+}
+function latestEstadoFor(nombre){
+  const arr = loadHist().filter(x => (x.medico||'')===nombre);
+  if(!arr.length) return null;
+  return arr[arr.length-1].estado || null;
+}
+
+
+/* === Seguimiento KAM (100% local) === */
+function getSeguimiento(){ return loadHist(); }
+function setSeguimiento(arr){ localStorage.setItem('seguimiento_historial', JSON.stringify(arr||[])); }
+function addSeguimiento(entry){ saveHist(entry); }
+
+function renderSeguimiento(){
+  const tb = document.querySelector('#segTable tbody');
+  if(!tb) return;
+  const rows = getSeguimiento();
+  if(!rows.length){ tb.innerHTML = '<tr><td colspan="6" class="muted">Sin registros aún</td></tr>'; return; }
+  tb.innerHTML = rows.map(r => `
+    <tr>
+      <td>${(r.medico||'')}</td>
+      <td>${(r.estado||'')}</td>
+      <td>${(r.fecha||'')}</td>
+      <td>${(r.proxima||'')}</td>
+      <td>${(r.comentario||'')}</td>
+      <td>${(r.kam||'')}</td>
+    </tr>`).join('');
+}
+
+function exportSegCSV(){
+  const rows = getSeguimiento();
+  if(!rows.length){ alert('Sin historial aún'); return; }
+  const headers = Object.keys(rows[0]);
+  const csv = [headers.join(',')]
+    .concat(rows.map(r=> headers.map(h=> `"${(r[h]??'').toString().replace(/"/g,'""')}"`).join(',')))
+    .join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='seguimiento_kam_historial.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+function exportSegXLSX(){
+  const rows = getSeguimiento();
+  if(!rows.length){ alert('Sin historial aún'); return; }
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Seguimiento KAM');
+  const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array'});
+  const blob = new Blob([wbout], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='seguimiento_kam_historial.xlsx'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* Eventos de la pestaña local */
+document.addEventListener('DOMContentLoaded', () => {
+  const btnCSV = document.getElementById('segCSV');
+  const btnXLSX = document.getElementById('segXLSX');
+  const btnClear = document.getElementById('segClear');
+  const btnNuevo = document.getElementById('nuevoSeg');
+  if(btnCSV) btnCSV.addEventListener('click', exportSegCSV);
+  if(btnXLSX) btnXLSX.addEventListener('click', exportSegXLSX);
+  if(btnClear) btnClear.addEventListener('click', () => {
+    if(confirm('¿Eliminar todo el historial local? Esta acción no se puede deshacer.')){
+      setSeguimiento([]); renderSeguimiento(); renderMedicos();
+    }
+  });
+  if(btnNuevo) btnNuevo.addEventListener('click', () => {
+    // Abre el modal vacío
+    openModal({Nombre:'', KAM:''});
+  });
+});
+
+
+/* === Historial lateral === */
+function estadoColor(estado){
+  const e = (estado||'').toLowerCase();
+  if(e.includes('cerrado')) return 'green';
+  if(e.includes('negoci')||e.includes('cita')||e.includes('contact')) return 'yellow';
+  if(e.includes('sin respuesta')||e.includes('cancel')||e.includes('no')) return 'red';
+  return 'gray';
+}
+function showHistPanel(nombre){
+  const panel=document.getElementById('histPanel');
+  const cont=document.getElementById('histContent');
+  const title=document.getElementById('histTitle');
+  const counter=document.getElementById('histCount');
+  const all=loadHist().filter(x=>(x.medico||'')===nombre);
+  if(!all.length){ panel.style.display='none'; return; }
+  title.textContent='Historial de Seguimiento — '+nombre;
+  counter.textContent=all.length+' seguimientos registrados';
+  const last=all.slice(-3).reverse();
+  cont.innerHTML='';
+  last.forEach((r,i)=>{
+    const div=document.createElement('div');
+    div.className='item';
+    const dotColor=estadoColor(r.estado);
+    div.innerHTML=`<span class="dot ${dotColor}"></span><strong>${r.fecha||''}</strong> — ${(r.estado||'')} (${r.kam||''})<br><span class="muted">${r.comentario||''}</span>`;
+    div.style.animationDelay=`${i*0.1}s`;
+    cont.appendChild(div);
+  });
+  panel.style.display='flex';
+}
+function hideHistPanel(){ document.getElementById('histPanel').style.display='none'; }
+
+/* Tabs */
+$$('.tab').forEach(tab=>tab.addEventListener('click',()=>{
+  $$('.tab').forEach(t=>t.classList.remove('active')); tab.classList.add('active');
+  const id=tab.dataset.tab; $$('.tabcontent').forEach(sec=>sec.style.display=sec.id===id?'':'none');
+  if(id==='estadisticas') buildStats(); if(id==='seguimientoKAM') renderSeguimiento();
+}));
+
+(async function init(){
+  await refreshHistCache();
+  await initMedicos();
+  await initCots();
+  buildStats();
+  renderSeguimiento();
+})();
+</script>
+
+<!-- Modal Registrar Cotización -->
+<div id="modalRegCot" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); backdrop-filter:blur(4px); z-index:2000; align-items:center; justify-content:center;">
+  <div style="background:#0f1623; color:#e5e7eb; border:1px solid #1f2937; border-radius:16px; width:95%; max-width:720px; padding:18px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <h3 style="margin:0; color:#93c5fd;">Registrar nueva cotización</h3>
+      <button id="closeRegCot" class="btn ghost" style="background:#0d1117;">Cerrar</button>
+    </div>
+    <form id="formRegCot" style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px;">
+      <input name="FECHA" placeholder="FECHA" required style="background:#0d1117; border:1px solid #1f2937; color:#e5e7eb; padding:8px; border-radius:10px;">
+      <input name="MEDICO" placeholder="MEDICO" required style="background:#0d1117; border:1px solid #1f2937; color:#e5e7eb; padding:8px; border-radius:10px;">
+      <input name="KAM" placeholder="KAM" required style="background:#0d1117; border:1px solid #1f2937; color:#e5e7eb; padding:8px; border-radius:10px;">
+      <input name="R0 DE INFU" placeholder="R0 DE INFU" required style="background:#0d1117; border:1px solid #1f2937; color:#e5e7eb; padding:8px; border-radius:10px;">
+      <input name="PACIENTE" placeholder="PACIENTE" required style="background:#0d1117; border:1px solid #1f2937; color:#e5e7eb; padding:8px; border-radius:10px;">
+      <input name="PAGO" placeholder="PAGO" required style="background:#0d1117; border:1px solid #1f2937; color:#e5e7eb; padding:8px; border-radius:10px;">
+      <input name="STATUS" placeholder="STATUS" style="background:#0d1117; border:1px solid #1f2937; color:#e5e7eb; padding:8px; border-radius:10px;">
+      <input name="ESQUEMA" placeholder="ESQUEMA" style="background:#0d1117; border:1px solid #1f2937; color:#e5e7eb; padding:8px; border-radius:10px;">
+      <input name="VALOR" placeholder="VALOR (ej. 35972.47)" style="background:#0d1117; border:1px solid #1f2937; color:#e5e7eb; padding:8px; border-radius:10px;">
+      <input name="CONFIRMADO" placeholder="CONFIRMADO" style="background:#0d1117; border:1px solid #1f2937; color:#e5e7eb; padding:8px; border-radius:10px;">
+      <div style="grid-column:1/-1;"><label style="display:block; margin:6px 0 4px 2px; color:#cbd5e1; font-size:12px;">Motivo</label><textarea name="MOTIVO" rows="5" placeholder="Describe el motivo o comentarios de esta cotización..." style="width:100%; background:#0d1117; border:1px solid #1f2937; color:#e5e7eb; padding:8px; border-radius:10px;"></textarea></div>
+      <div style="grid-column:1/-1; display:flex; justify-content:flex-end; gap:8px; margin-top:6px;">
+        <button type="button" id="cancelRegCot" class="btn ghost">Cancelar</button>
+        <button type="submit" class="btn">Guardar cotización</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+(function(){
+  const modal = document.getElementById('modalRegCot');
+  const openBtn = document.getElementById('openRegCot');
+  const closeBtn = document.getElementById('closeRegCot');
+  const cancelBtn = document.getElementById('cancelRegCot');
+  const form = document.getElementById('formRegCot');
+  if(openBtn){ openBtn.addEventListener('click', ()=>{ modal.style.display='flex'; }); }
+  [closeBtn,cancelBtn].forEach(b=> b && b.addEventListener('click', ()=>{ modal.style.display='none'; }));
+  if(form){
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const fd = new FormData(form); const row = {};
+      fd.forEach((v,k)=> row[k]= (''+v).trim());
+      // store locally so mergeLocalAdditions lo retoma
+      try{
+        const key='cotizaciones_local_add';
+        const cur = JSON.parse(localStorage.getItem(key) || '[]');
+        cur.push(row);
+        localStorage.setItem(key, JSON.stringify(cur));
+      }catch(e){ console.warn('No se pudo escribir en localStorage', e); }
+      // actualiza en memoria y UI
+      if(typeof COT_BASE!=='undefined'){ COT_BASE.push(row); }
+      if(typeof applyCotFilters==='function'){ applyCotFilters(); } else if (typeof renderCotizaciones==='function'){ renderCotizaciones(); }
+      alert('Cotización guardada con éxito');
+      modal.style.display='none';
+      form.reset();
+      // Hook opcional de Google Sheets (si existe)
+      if(window.ENDPOINTS && ENDPOINTS.cotizaciones){
+        try{
+          await fetch(ENDPOINTS.cotizaciones, { method:'POST', mode:'no-cors', body: new URLSearchParams(row) });
+        }catch(err){ console.warn('No se pudo sincronizar con Google Sheets en este momento.', err); }
+      }
+    });
+  }
+})();
+</script>
+
+
+<section id="estadisticas-mapa" class="container">
+  <div class="stats-grid">
+    <div class="card">
+      <h3>Mapa de Médicos por Estado</h3>
+      <div id="mapaMX"></div>
+      
+    </div>
+    <div class="card">
+      <h3>Cotizaciones por Mes</h3>
+      <canvas id="chartMes"></canvas>
+    </div>
+  </div>
+  <div class="stats-grid" style="margin-top:1rem;">
+    <div class="card">
+      <h3>Estatus de Cotizaciones</h3>
+      <canvas id="chartStatus"></canvas>
+    </div>
+    <div class="card">
+      <h3>Cotizaciones por Estado</h3>
+      </div>
+    <div class="card">
+      <h3>Cotizaciones por KAM</h3>
+      <canvas id="chartKAM"></canvas>
+
+      <canvas id="chartEstado"></canvas>
+    </div>
+  </div>
+</section>
+
+  <!-- Leaflet & Chart.js -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+
+  <script>
+  (function(){
+    // Paleta neutra (respeta estilos actuales)
+    function numberFmt(n){
+      try{ return n.toLocaleString('es-MX'); }catch(e){ return String(n); }
+    }
+
+    // --- MAPA ---
+    const map = L.map('mapaMX').setView([23.5, -102.0], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+
+    Promise.all([
+      fetch('medicos_estado_counts.json').then(r=>r.json()).catch(()=>({})),
+      fetch('mexico_state_centroids.json').then(r=>r.json()).catch(()=>({}))
+    ]).then(([counts, centroids])=>{
+      const maxVal = Object.values(counts||{}).reduce((a,b)=>Math.max(a,b),0) || 1;
+      Object.entries(counts||{}).forEach(([estado, n])=>{
+        const coord = centroids[estado];
+        if(!coord) return;
+        const radius = 8 + (30 * (n/maxVal));
+        const circle = L.circleMarker(coord, {radius, weight:1, opacity:.9, fillOpacity:.4});
+        circle.bindTooltip(`${estado}: ${numberFmt(n)} médic@s`);
+        circle.addTo(map);
+      });
+    });
+
+    // --- Gráficos ---
+    fetch('cotizaciones_charts.json').then(r=>r.json()).then(data=>{
+      // Por mes
+      const ctxMes = document.getElementById('chartMes');
+      if (ctxMes && data.by_month && data.by_month.labels.length){
+        new Chart(ctxMes, {
+          type: 'bar',
+          data: { labels: data.by_month.labels, datasets: [{ label:'Cotizaciones', data: data.by_month.values }] },
+          options: { responsive:true, plugins: { legend: { display: false } } }
+        });
+      } else if (ctxMes) {
+        ctxMes.replaceWith(Object.assign(document.createElement('div'),{innerText:'Sin datos de fechas para graficar.'}));
+      }
+
+      // Estatus
+      const ctxSt = document.getElementById('chartStatus');
+      if (ctxSt && data.by_status && data.by_status.labels.length){
+        new Chart(ctxSt, {
+          type: 'bar',
+          data: { labels: data.by_status.labels, datasets: [{ label:'Cotizaciones', data: data.by_status.values }] },
+          options: { responsive:true, plugins: { legend: { display: false } } }
+        });
+      } else if (ctxSt) {
+        ctxSt.replaceWith(Object.assign(document.createElement('div'),{innerText:'Sin datos de estatus para graficar.'}));
+      }
+
+      // Por estado (si existe en cotizaciones)
+      const ctxEst = document.getElementById('chartEstado');
+      if (ctxEst && data.by_estado && data.by_estado.labels.length){
+        new Chart(ctxEst, {
+          type: 'bar',
+          data: { labels: data.by_estado.labels, datasets: [{ label:'Cotizaciones', data: data.by_estado.values }] },
+          options: { responsive:true, plugins: { legend: { display: false } }, scales: { x: { ticks:{ autoSkip:false, maxRotation:45, minRotation:0 } } } }
+        });
+      } else if (ctxEst) {
+        ctxEst.replaceWith(Object.assign(document.createElement('div'),{innerText:'Sin columna de estado en cotizaciones.'}));
+      }
+    }).catch(()=>{
+      ['chartMes','chartStatus','chartEstado'].forEach(id=>{
+        const el = document.getElementById(id);
+        if(el) el.replaceWith(Object.assign(document.createElement('div'),{innerText:'No se pudo cargar cotizaciones_charts.json'}));
+      });
+    });
+  })();
+  </script>
+
+<!-- KAM Metrics (auto-inyectado) -->
+<section id="kam-metrics" style="padding:24px 16px;">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+    <h2 style="margin:0;font-size:1.25rem;">KAM Metrics</h2>
+    <span id="kam-total" style="background:#111827;color:#E5E7EB;border:1px solid #374151;border-radius:10px;padding:6px 10px;font-weight:600;">
+      Cotizaciones totales: <strong id="totalQuotes">0</strong>
+    </span>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr;gap:20px;">
+    <div style="background:#0b0f17;border:1px solid #1f2937;border-radius:16px;padding:16px;">
+      <h3 style="margin:0 0 10px 0;">Cotizaciones por KAM</h3>
+      <canvas id="kamBar" height="140"></canvas>
+    </div>
+    <div style="background:#0b0f17;border:1px solid #1f2937;border-radius:16px;padding:16px;">
+      <h3 style="margin:0 0 10px 0;">Top KAM</h3>
+      <canvas id="kamTop" height="140"></canvas>
+    </div>
+  </div>
+</section>
+
+<script src="assets/js/kamMetrics.js"></script>
+
+<!-- Toast -->
+<div id="toastBox" style="position:fixed;top:16px;right:16px;z-index:3000;display:none;">
+  <div id="toast" style="background:#0A497B;color:#fff;padding:12px 14px;border-radius:10px;
+    box-shadow:0 10px 30px rgba(10,73,123,.35);font-weight:600;letter-spacing:.2px;">
+    Guardado en Firestore ✓
+  </div>
+</div>
+
+<!-- Panel lateral de historial -->
+<div id="histPanel">
+  <h3 id="histTitle">Historial</h3>
+  <div id="histCount" class="muted" style="margin-bottom:10px;"></div>
+  <div id="histContent"></div>
+</div>
+
+
+<!-- ==== INYECTADO: Dashboard Tecnológico (by ChatGPT) ==== -->
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Estilo tecnológico */
+  .dash-wrap{display:flex;flex-direction:column;gap:14px;}
+  .kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+  @media (max-width: 1100px){ .kpi-grid{grid-template-columns:repeat(2,1fr)} }
+  @media (max-width: 700px){ .kpi-grid{grid-template-columns:1fr} }
+  .kpi{
+    background: radial-gradient(1200px 1200px at 0% 0%, rgba(21,180,209,.08), transparent),
+                linear-gradient(180deg, rgba(10,73,123,.25), rgba(9,45,78,.15));
+    border:1px solid #153148; border-radius:14px; padding:14px;
+    box-shadow: 0 15px 40px rgba(5,14,35,.45), inset 0 0 12px rgba(16,121,194,.15);
+  }
+  .kpi .label{font-size:12px;color:#93c5fd;letter-spacing:.4px;text-transform:uppercase;font-weight:700;font-family:Orbitron,Inter}
+  .kpi .value{font-size:22px;margin-top:6px;font-weight:800;letter-spacing:.3px}
+  .kpi .sub{font-size:12px;color:#94a3b8;margin-top:6px}
+  .panel-grid{display:grid;grid-template-columns:1.2fr 0.8fr; gap:14px}
+  @media (max-width: 1100px){ .panel-grid{grid-template-columns:1fr} }
+  .chart-card{background:rgba(11,26,42,.7); border:1px solid #172a3c; border-radius:14px; padding:12px}
+  .chart-card h3{margin:0 0 8px 0; color:#c7d2fe; font-family:Orbitron,Inter; font-weight:600; font-size:14px; letter-spacing:.5px}
+  .neon{box-shadow: 0 0 0 1px rgba(20,120,220,.2), 0 12px 28px rgba(0,0,0,.35), inset 0 0 32px rgba(26,182,255,.08)}
+  .legend-row{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:#9fbad6}
+  .pill{border:1px solid #24435f; padding:3px 8px; border-radius:999px; background:#0b1a2a}
+  .mutedd{color:#8aa3ba;font-size:12px}
+</style>
+
+<script>
+// ===== Dashboard Tecnológico =====
+(function(){
+  // Util: convertir a número
+  function toNum(v){
+    if(v==null) return 0;
+    let s = (''+v).replace(/[^0-9.,-]/g,'').replace(/,/g,'');
+    let n = parseFloat(s);
+    return isNaN(n)?0:n;
+  }
+  // Mapeo meses usuales en tus datos (MAYÚSCULAS)
+  const MESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+
+  // 1) Reemplazar el contenido de la sección #estadisticas
+  function mountDashboardSection(){
+    const sec = document.getElementById('estadisticas');
+    if(!sec) return;
+    sec.innerHTML = `
+      <div class="dash-wrap">
+        <div class="kpi-grid">
+          <div class="kpi neon"><div class="label">Cotizaciones</div><div class="value" id="kpi-total">—</div><div class="sub" id="kpi-mes"></div></div>
+          <div class="kpi neon"><div class="label">Monto total</div><div class="value" id="kpi-monto">—</div><div class="sub mutedd">Suma de VALOR</div></div>
+          <div class="kpi neon"><div class="label">Promedio</div><div class="value" id="kpi-prom">—</div><div class="sub mutedd">Monto / Cotización</div></div>
+          <div class="kpi neon"><div class="label">Por KAM</div><div class="value" id="kpi-kams">—</div><div class="sub mutedd">KAM con actividad</div></div>
+          <div class="kpi neon"><div class="label">Conversión</div><div class="value" id="kpi-conv">—</div><div class="sub mutedd">ACTIVO / Total</div></div>
+        </div>
+
+        <div class="panel-grid">
+          <div class="chart-card neon">
+            <h3>Proyección mensual (real vs. tendencia)</h3>
+            <canvas id="chLine"></canvas>
+            <div class="legend-row"><span class="pill">Real</span><span class="pill">Proyección</span></div>
+          </div>
+          <div class="chart-card neon">
+            <h3>Distribución por estatus</h3>
+            <canvas id="chPie"></canvas>
+          </div>
+        </div>
+
+        <div class="panel-grid">
+          <div class="chart-card neon">
+            <h3>Top 10 médicos por monto</h3>
+            <canvas id="chTopMed"></canvas>
+          </div>
+          <div class="chart-card neon">
+            <h3>Comparativa por KAM (mensual)</h3>
+            <canvas id="chKamMes"></canvas>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // 2) Render de KPIs y Charts usando COT_BASE (ya existente en tu app)
+  let _line, _pie, _top, _kam;
+
+  function unique(arr){ return Array.from(new Set(arr)); }
+
+  function sumarPorMes(rows){
+    const map = {}; // { MES: totalValor }
+    rows.forEach(r=>{
+      const mes = (r['FECHA']||'').toString().trim().toUpperCase();
+      map[mes] = (map[mes]||0) + toNum(r['VALOR']);
+    });
+    // ordenar por MESES si existen, si no por clave
+    const existing = MESES.filter(m => map[m]!=null);
+    const labels = existing.length? existing: Object.keys(map);
+    const values = labels.map(m => map[m]||0);
+    return {labels, values};
+  }
+
+  function regresionLineal(y){
+    // y = array de valores, x = 0..n-1
+    const n = y.length;
+    if(n===0) return y;
+    const xs = Array.from({length:n}, (_,i)=>i);
+    const sumX = xs.reduce((a,b)=>a+b,0);
+    const sumY = y.reduce((a,b)=>a+b,0);
+    const sumXY = y.reduce((a,yi,i)=>a+yi*i,0);
+    const sumXX = xs.reduce((a,xi)=>a+xi*xi,0);
+    const denom = (n*sumXX - sumX*sumX) || 1;
+    const m = (n*sumXY - sumX*sumY) / denom;
+    const b = (sumY - m*sumX) / n;
+    // proyección 1 punto extra
+    const proj = xs.concat([n]).map(x => Math.max(0, m*x + b));
+    return proj;
+  }
+
+  function agruparPorStatus(rows){
+    const map = {};
+    rows.forEach(r=>{
+      const s = (r['STATUS']||'PENDIENTE').toString().trim().toUpperCase();
+      map[s] = (map[s]||0)+1;
+    });
+    const labels = Object.keys(map);
+    const counts = labels.map(k=>map[k]);
+    return {labels, counts};
+  }
+
+  function topMedicos(rows, topN=10){
+    const map = {};
+    rows.forEach(r=>{
+      const m = (r['MEDICO']||'').toString();
+      map[m] = (map[m]||0) + toNum(r['VALOR']);
+    });
+    const sorted = Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0, topN);
+    const labels = sorted.map(x=>x[0]);
+    const values = sorted.map(x=>x[1]);
+    return {labels, values};
+  }
+
+  function porKamYMes(rows){
+    const mesesSet = new Set();
+    const kamSet = new Set();
+    const acc = {}; // acc[mes][kam] = sum
+
+    rows.forEach(r=>{
+      const mes = (r['FECHA']||'').toString().trim().toUpperCase();
+      const kam = (r['KAM']||'').toString().trim();
+      mesesSet.add(mes); kamSet.add(kam);
+      acc[mes] = acc[mes]||{};
+      acc[mes][kam] = (acc[mes][kam]||0) + toNum(r['VALOR']);
+    });
+
+    const meses = MESES.filter(m=>mesesSet.has(m));
+    const kams = Array.from(kamSet);
+    const datasets = kams.map((kam, idx)=> ({
+      label: kam || '—',
+      data: meses.map(m => (acc[m]&&acc[m][kam])? acc[m][kam] : 0),
+      borderWidth: 1,
+      // No especificamos color para seguir las reglas del entorno: Chart.js asignará automáticamente
+    }));
+    return {meses, datasets};
+  }
+
+  function fmtMoney(n){
+    try{ return new Intl.NumberFormat('es-MX', {style:'currency', currency:'MXN'}).format(n||0); }catch(_){ return '$'+(n||0).toFixed(2); }
+  }
+
+  // Redefinir buildStats para engancharlo al flujo existente
+  window.buildStats = function(){
+    mountDashboardSection();
+
+    const rows = (window.COT_BASE||[]);
+    const total = rows.length;
+    const suma = rows.reduce((a,r)=> a + toNum(r['VALOR']), 0);
+    const kams = unique(rows.map(r => (r['KAM']||'').toString().trim()).filter(Boolean));
+    const conv = (rows.filter(r=> (r['STATUS']||'').toString().toUpperCase()==='ACTIVO').length / (total||1))*100;
+
+    // KPI
+    const hoy = new Date(); const m = hoy.toLocaleString('es-MX', { month:'long' });
+    document.getElementById('kpi-total').textContent = total.toString();
+    document.getElementById('kpi-mes').textContent = 'Mes actual: '+ m[0].toUpperCase() + m.slice(1);
+    document.getElementById('kpi-monto').textContent = fmtMoney(suma);
+    document.getElementById('kpi-prom').textContent = fmtMoney(suma/(total||1));
+    document.getElementById('kpi-kams').textContent = kams.length.toString();
+    document.getElementById('kpi-conv').textContent = (conv||0).toFixed(1)+'%';
+
+    // CHART: Línea real vs. proyección
+    const msum = sumarPorMes(rows);
+    const proj = regresionLineal(msum.values);
+    const ctxL = document.getElementById('chLine').getContext('2d');
+    if(_line) _line.destroy();
+    _line = new Chart(ctxL, {
+      type:'line',
+      data:{
+        labels: msum.labels.concat(['PROY']),
+        datasets:[
+          { label:'Real', data: msum.values, tension:0.35, fill:false },
+          { label:'Proyección', data: proj, tension:0.35, borderDash:[6,6], fill:false }
+        ]
+      },
+      options:{ responsive:true, plugins:{ legend:{ labels:{ color:'#cbd5e1'} } }, scales:{ x:{ ticks:{ color:'#9fbad6'} }, y:{ ticks:{ color:'#9fbad6'} } } }
+    });
+
+    // CHART: Pie por estatus
+    const byS = agruparPorStatus(rows);
+    const ctxP = document.getElementById('chPie').getContext('2d');
+    if(_pie) _pie.destroy();
+    _pie = new Chart(ctxP, {
+      type:'doughnut',
+      data:{ labels:byS.labels, datasets:[{ data:byS.counts }]},
+      options:{ responsive:true, plugins:{ legend:{ position:'bottom', labels:{ color:'#cbd5e1' } } } }
+    });
+
+    // CHART: Top médicos
+    const top = topMedicos(rows, 10);
+    const ctxT = document.getElementById('chTopMed').getContext('2d');
+    if(_top) _top.destroy();
+    _top = new Chart(ctxT, {
+      type:'bar',
+      data:{ labels:top.labels, datasets:[{ label:'Monto', data:top.values }]},
+      options:{ indexAxis:'y', responsive:true, plugins:{ legend:{ display:false }, tooltip:{ enabled:true } },
+        scales:{ x:{ ticks:{ color:'#9fbad6'} }, y:{ ticks:{ color:'#9fbad6'} } } }
+    });
+
+    // CHART: KAM por mes (stacked)
+    const km = porKamYMes(rows);
+    const ctxK = document.getElementById('chKamMes').getContext('2d');
+    if(_kam) _kam.destroy();
+    _kam = new Chart(ctxK, {
+      type:'bar',
+      data:{ labels:km.meses, datasets: km.datasets },
+      options:{ responsive:true, plugins:{ legend:{ position:'bottom', labels:{ color:'#cbd5e1'} } },
+        scales:{ x:{ stacked:true, ticks:{ color:'#9fbad6'} }, y:{ stacked:true, ticks:{ color:'#9fbad6'} } } }
+    });
+  };
+
+  // Hook adicional por si el tab ya estaba seleccionado al cargar
+  document.addEventListener('DOMContentLoaded', ()=>{
+    // Si ya estás en estadísticas, construir de inmediato
+    const active = document.querySelector('.tab.active');
+    if(active && active.dataset.tab === 'estadisticas'){
+      window.buildStats();
+    }
+  });
+
+})(); // end IIFE
+</script>
+<!-- ==== /INYECTADO ==== -->
+
+
+<!-- ==== INYECTADO: Panel de Filtros y Auto-Refresh ==== -->
+<style>
+  /* Botón Filtros (top-right minimal) */
+  #btnFilters{
+    position:absolute; right:6px; top:6px; z-index:10;
+    padding:8px 12px; border-radius:10px; border:1px solid #153148;
+    background:rgba(11,26,42,.85); color:#cfe3ff; font-weight:700; cursor:pointer;
+    backdrop-filter: blur(4px);
+  }
+  #btnFilters:hover{ filter:brightness(1.15); }
+  /* Contenedor relativo para ubicar el botón */
+  .dash-wrap{ position:relative; }
+
+  /* Panel lateral deslizante */
+  #filtersPanel{
+    position:fixed; inset:0 auto 0 0; width:300px; transform:translateX(-102%);
+    background:rgba(11,26,42,.95); border-right:1px solid #17354f;
+    z-index:4000; backdrop-filter: blur(6px);
+    transition: transform .28s ease;
+    padding:14px;
+    box-shadow: 12px 0 28px rgba(0,0,0,.35), inset -1px 0 0 rgba(26,182,255,.18);
+  }
+  #filtersPanel.open{ transform:translateX(0); }
+  #filtersPanel h4{ margin:0 0 10px 0; font-family:Orbitron,Inter; color:#c7d2fe; font-size:14px; letter-spacing:.4px }
+  #filtersPanel label{ display:block; font-size:12px; color:#9fbad6; margin:10px 0 6px }
+  #filtersPanel select, #filtersPanel button{
+    width:100%; padding:8px 10px; border-radius:10px; border:1px solid #1a3a53; background:#0b1a2a; color:#e5e7eb;
+  }
+  #filtersPanel .row{ display:flex; gap:8px; }
+  #filtersClose{ margin-top:10px; background:#0f2236; }
+  #filtersApply{ margin-top:8px; }
+</style>
+
+<div id="filtersPanel" aria-hidden="true">
+  <h4>⚙️ Filtros</h4>
+  <label>KAM</label>
+  <select id="selKAM"><option value="__ALL__">Todos</option></select>
+  <label>Mes</label>
+  <select id="selMes"><option value="__ALL__">Todos</option></select>
+  <button id="filtersApply">🔄 Actualizar datos</button>
+  <button id="filtersClose">✖️ Cerrar</button>
+</div>
+
+<script>
+(function(){
+  // Estado de filtros (persisten en memoria de la página)
+  let FILTER_KAM = '__ALL__';
+  let FILTER_MES = '__ALL__';
+  let _timer = null; // auto-refresh
+
+  // Exponemos helpers para el resto del dashboard
+  window.__getFilters = () => ({kam: FILTER_KAM, mes: FILTER_MES});
+
+  function normMes(m){
+    if(!m) return '';
+    return (''+m).trim().toUpperCase();
+  }
+  function normKam(k){
+    if(!k) return '';
+    return (''+k).trim();
+  }
+
+  function applyFiltersToRows(rows){
+    const fKam = FILTER_KAM;
+    const fMes = FILTER_MES;
+    return rows.filter(r=>{
+      const mes = normMes(r['FECHA']);
+      const kam = normKam(r['KAM']);
+      const okK = (fKam==='__ALL__') || (kam===fKam);
+      const okM = (fMes==='__ALL__') || (mes===fMes);
+      // además descartamos valores sin monto
+      const val = (r['VALOR'] ?? '').toString().replace(/[^0-9.,-]/g,'').replace(/,/g,'');
+      const num = parseFloat(val||'0') || 0;
+      return okK && okM && num>0;
+    });
+  }
+
+  // Rellena opciones de filtros con base en la data actual
+  function populateFilterOptions(){
+    const rows = (window.COT_BASE||[]);
+    const kams = Array.from(new Set(rows.map(r=> normKam(r['KAM'])).filter(Boolean)));
+    const meses = Array.from(new Set(rows.map(r=> normMes(r['FECHA'])).filter(Boolean)));
+    const selK = document.getElementById('selKAM');
+    const selM = document.getElementById('selMes');
+    if(selK){
+      const cur = FILTER_KAM;
+      selK.innerHTML = '<option value="__ALL__">Todos</option>' + kams.map(k=>`<option value="${k}">${k}</option>`).join('');
+      selK.value = cur;
+    }
+    if(selM){
+      const curm = FILTER_MES;
+      // Orden por meses conocidos si aplica
+      const MESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+      const ordered = MESES.filter(m => meses.includes(m));
+      const fallback = meses.filter(m => !ordered.includes(m));
+      selM.innerHTML = '<option value="__ALL__">Todos</option>' + ordered.concat(fallback).map(m=>`<option value="${m}">${m}</option>`).join('');
+      selM.value = curm;
+    }
+  }
+
+  // Cargar datos desde cotizaciones.json y reconstruir dashboard
+  async function fetchDataAndBuildStats(){
+    try{
+      const res = await fetch('cotizaciones.json?v='+(Date.now()), {cache:'no-store'});
+      const data = await res.json();
+      window.COT_BASE = Array.isArray(data) ? data : [];
+    }catch(e){
+      console.warn('No se pudo leer cotizaciones.json', e);
+      window.COT_BASE = window.COT_BASE || [];
+    }
+    populateFilterOptions();
+
+    // Sobrescribir buildStats para aplicar filtros previos a pintar
+    if(typeof window._orig_buildStats !== 'function'){
+      window._orig_buildStats = window.buildStats;
+    }
+
+    const saved = window._orig_buildStats;
+    // wrapper que filtra antes de graficar
+    window.buildStats = function(){
+      // Montar UI del dashboard original
+      saved();
+
+      // Insertar botón de filtros (top-right) si no existe
+      const wrap = document.querySelector('.dash-wrap');
+      if(wrap && !document.getElementById('btnFilters')){
+        const btn = document.createElement('button');
+        btn.id = 'btnFilters'; btn.textContent = '⚙️ Filtros';
+        btn.addEventListener('click', ()=>{
+          document.getElementById('filtersPanel').classList.add('open');
+        });
+        wrap.appendChild(btn);
+      }
+
+      // Aplicar filtros a los datos y re-graficar usando las funciones del dashboard
+      const all = window.COT_BASE||[];
+      const filtered = applyFiltersToRows(all);
+
+      // Reemplazar temporalmente COT_BASE mientras se pintan gráficos
+      const backup = window.COT_BASE;
+      window.COT_BASE = filtered;
+
+      // Ejecutar de nuevo el constructor real de gráficos para re-pintar con filtrados
+      // Para evitar loops, llamamos internamente las funciones graficadoras reusando "window._repaintCharts" si existe,
+      // de lo contrario reconstruimos los charts reinvocando saved() tras montar contenedores.
+      // Ya que saved() monta contenedores y crea charts desde cero, reinstanciamos:
+      saved();
+
+      // Restaurar
+      window.COT_BASE = backup;
+    };
+
+    // Disparar buildStats tras actualización de datos
+    if(typeof window.buildStats === 'function'){
+      window.buildStats();
+    }
+  }
+
+  // Listeners del panel
+  document.addEventListener('click', (ev)=>{
+    const fp = document.getElementById('filtersPanel');
+    if(!fp) return;
+    if(ev.target && ev.target.id === 'filtersClose'){
+      fp.classList.remove('open');
+    }
+    if(ev.target && ev.target.id === 'filtersApply'){
+      // leer selects
+      const selK = document.getElementById('selKAM');
+      const selM = document.getElementById('selMes');
+      FILTER_KAM = (selK && selK.value) ? selK.value : '__ALL__';
+      FILTER_MES = (selM && selM.value) ? selM.value : '__ALL__';
+      fp.classList.remove('open');
+      // Recalcular con filtros actuales
+      if(typeof window.buildStats === 'function'){
+        window.buildStats();
+      }
+    }
+  });
+
+  // Cambios directos en selects también aplican
+  document.addEventListener('change', (ev)=>{
+    if(ev.target && (ev.target.id === 'selKAM' || ev.target.id === 'selMes')){
+      const selK = document.getElementById('selKAM');
+      const selM = document.getElementById('selMes');
+      FILTER_KAM = (selK && selK.value) ? selK.value : '__ALL__';
+      FILTER_MES = (selM && selM.value) ? selM.value : '__ALL__';
+    }
+  });
+
+  // Auto-refresh cada 30s manteniendo filtros activos
+  function startTimer(){
+    if(_timer) clearInterval(_timer);
+    _timer = setInterval(fetchDataAndBuildStats, 30000);
+  }
+
+  // Hook al cargar la pestaña de estadísticas
+  document.addEventListener('DOMContentLoaded', ()=>{
+    startTimer();
+  });
+
+  // Exponer una función global por si el usuario quiere forzar manualmente
+  window.fetchDataAndBuildStats = fetchDataAndBuildStats;
+
+  // Primera carga inmediata
+  fetchDataAndBuildStats();
+
+})(); // end IIFE
+
+// === Registro interno de médicos (embebido) ===
+const trim = s => (s||'').toString().trim();
+
+async function saveMedico(){
+  const payload={
+    Nombre:trim(document.getElementById('m_nombre').value),
+    Teléfono:trim(document.getElementById('m_tel').value),
+    Dirección:trim(document.getElementById('m_dir').value),
+    Hospital:trim(document.getElementById('m_hosp').value),
+    'Red Social':trim(document.getElementById('m_red').value),
+    Especialidad:trim(document.getElementById('m_esp').value),
+    Estado:trim(document.getElementById('m_estado').value),
+    Región:trim(document.getElementById('m_region').value),
+    'Gerente / KAM':trim(document.getElementById('m_kam').value),
+    Base:trim(document.getElementById('m_base').value)
+  };
+  try{
+    // Enviar a Apps Script
+    await fetch(ENDPOINTS.medicos,{ method:'POST', mode:'no-cors', body:new URLSearchParams(payload) });
+    // Guardar local para visualizar en tiempo real
+    const key='medicos_local_add';
+    const arr = JSON.parse(localStorage.getItem(key)||'[]');
+    arr.push(payload);
+    localStorage.setItem(key, JSON.stringify(arr));
+    // Aviso
+    if (typeof Swal!=='undefined'){ Swal.fire({icon:'success', title:'✅ Médico guardado con éxito ✓', timer:1600, showConfirmButton:false}); }
+    // Cerrar panel y refrescar tabla
+    document.getElementById('panelAddMedico').style.display='none';
+    await initMedicos(); // recarga base y re-render
+  }catch(e){
+    alert('Error al guardar: '+e.message);
+  }
+}
+
+function clearMed(){
+  ['m_nombre','m_tel','m_dir','m_hosp','m_red','m_esp','m_estado','m_region','m_kam','m_base']
+    .forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+}
+
+// Listeners del panel interno
+document.getElementById('btnAddMedico').addEventListener('click',()=>{
+  const p=document.getElementById('panelAddMedico'); p.style.display = (p.style.display==='none'||!p.style.display)?'block':'none';
+});
+document.getElementById('btnSaveMed').addEventListener('click', saveMedico);
+document.getElementById('btnClearMed').addEventListener('click', clearMed);
+document.getElementById('btnCloseMed').addEventListener('click', ()=> document.getElementById('panelAddMedico').style.display='none');
+
+</script>
+<!-- ==== /INYECTADO: Panel de Filtros ==== -->
+
+
+            <!-- COTIZACIONES-LAUNCHER :: botón flotante no intrusivo -->
+            <style>
+              .cotz-fab{position:fixed;right:18px;bottom:18px;background:#0f1622;border:1px solid #1e293b;
+                color:#eaf1ff;border-radius:12px;padding:10px 12px;font-family:system-ui;z-index:99999;box-shadow:0 6px 18px rgba(0,0,0,.3)}
+              .cotz-fab:hover{filter:brightness(1.1)}
+            </style>
+            <a class="cotz-fab" href="./cotizaciones/cotizaciones.html">📄 Cotizaciones (vivo)</a>
+            <!-- /COTIZACIONES-LAUNCHER -->
+            
+
+  <script src="assets/js/config.js?v=1"></script>
+<script type="module" src="assets/js/firebase_medicos.js?v=20251103R2"></script>
+<script type="module" src="assets/js/save_med_index.js?v=20251103R2"></script>
+
+<!-- Modal Seguimiento -->
+<div id="modal-seg" class="modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.4);">
+  <div class="modal-content" style="background:#0f172a;color:#fff;border-radius:12px;padding:16px;max-width:780px;margin:40px auto;box-shadow:0 10px 30px rgba(0,0,0,.4)">
+    <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <h3 style="margin:0;font-size:20px;">Seguimiento de médico</h3>
+      <button id="seg-cerrar" style="padding:6px 10px;border-radius:8px;border:1px solid #334155;background:#1f2937;color:#fff;cursor:pointer">Cerrar</button>
+    </div>
+    <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <input id="seg-id" type="hidden" />
+      <label>Nombre
+        <input id="seg-nombre" class="input" type="text" style="width:100%;padding:8px;border-radius:8px;border:1px solid #334155;background:#0b1220;color:#fff;">
+      </label>
+      <label>Teléfono
+        <input id="seg-telefono" class="input" type="text" style="width:100%;padding:8px;border-radius:8px;border:1px solid #334155;background:#0b1220;color:#fff;">
+      </label>
+      <label>Dirección
+        <input id="seg-direccion" class="input" type="text" style="width:100%;padding:8px;border-radius:8px;border:1px solid #334155;background:#0b1220;color:#fff;">
+      </label>
+      <label>Hospital
+        <input id="seg-hospital" class="input" type="text" style="width:100%;padding:8px;border-radius:8px;border:1px solid #334155;background:#0b1220;color:#fff;">
+      </label>
+      <label>Red social
+        <input id="seg-redSocial" class="input" type="text" style="width:100%;padding:8px;border-radius:8px;border:1px solid #334155;background:#0b1220;color:#fff;">
+      </label>
+      <label>Especialidad
+        <input id="seg-especialidad" class="input" type="text" style="width:100%;padding:8px;border-radius:8px;border:1px solid #334155;background:#0b1220;color:#fff;">
+      </label>
+      <label>Base
+        <input id="seg-base" class="input" type="text" style="width:100%;padding:8px;border-radius:8px;border:1px solid #334155;background:#0b1220;color:#fff;">
+      </label>
+      <label>Estado
+        <input id="seg-estado" class="input" type="text" style="width:100%;padding:8px;border-radius:8px;border:1px solid #334155;background:#0b1220;color:#fff;">
+      </label>
+      <label>Región
+        <input id="seg-region" class="input" type="text" style="width:100%;padding:8px;border-radius:8px;border:1px solid #334155;background:#0b1220;color:#fff;">
+      </label>
+      <label>Gerente / KAM
+        <input id="seg-kam" class="input" type="text" style="width:100%;padding:8px;border-radius:8px;border:1px solid #334155;background:#0b1220;color:#fff;">
+      </label>
+      <label>Estatus
+        <input id="seg-estatus" class="input" type="text" placeholder="prospecto / activo / etc." style="width:100%;padding:8px;border-radius:8px;border:1px solid #334155;background:#0b1220;color:#fff;">
+      </label>
+    </div>
+    <div class="modal-footer" style="margin-top:14px;display:flex;gap:10px;justify-content:flex-end;">
+      <button id="seg-guardar" style="padding:8px 14px;border-radius:10px;border:0;background:#2563eb;color:#fff;cursor:pointer">Guardar</button>
+    </div>
+  </div>
+</div>
+
+  <script src="assets/js/link_rows_to_firestore.js?v=2"></script>
+<script src="assets/js/resolve_docid_on_click.js?v=1"></script>
+<script src="assets/js/seg_panel_adapter.js?v=7"></script>
+<script src="assets/js/patch_followup_runtime.js?v=1"></script>
+<!-- <script src="assets/js/refresh_on_guardado.js?v=1"></script> -->
+<script type="module" src="assets/js/mobile_cache_refresh.js?v=20251103R2"></script>
+<!-- <script src="assets/js/refresh_button_hook.js?v=20251103RT"></script> -->
+
+<script>
+/* === Renderer oficial para la tabla de MÉDICOS ==========================
+   Usa los docs que emite firebase_medicos.js en tiempo real.
+   - Llena #tbody-medicos
+   - Busca en varios campos (sin acentos)
+   - Respeta filtros Estado/Región/KAM si existen
+========================================================================= */
+(function () {
+  const $ = (s) => document.querySelector(s);
+  const tbody   = $("#tbody-medicos");
+  const qInput  = $("#qMed");
+  const fEstado = $("#fEstado");
+  const fRegion = $("#fRegion");
+  const fKAM    = $("#fKAM");
+  const pageInfo= $("#pageInfoMed");
+
+  let ALL = [];
+  let VIEW = [];
+
+  const norm = (v) => String(v || "")
+    .toLowerCase()
+    .normalize("NFD").replace(/[^\x00-\x7F]/g, '')  // elimina diacríticos
+
+  function paint(list) {
+    if (!tbody) return;
+    tbody.innerHTML = "";
+    (list || []).forEach(m => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${m.nombre || "-"}</td>
+        <td>${m.telefono || "-"}</td>
+        <td>${m.direccion || "-"}</td>
+        <td>${m.hospital || "-"}</td>
+        <td>${m.redSocial || "No clasificado"}</td>
+        <td>${m.especialidad || "No clasificado"}</td>
+        <td>${m.base || "Sin seguro"}</td>
+        <td>${m.estado || "-"}</td>
+        <td>${m.region || "-"}</td>
+        <td>${m.kam || "-"}</td>
+        <td><button class="btn ghost" data-id="${m.id || ""}">+ Seguimiento</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+    if (pageInfo) pageInfo.textContent = `Mostrando ${list.length} — Página 1/1`;
+  }
+
+  function applyFilters() {
+    const q   = norm(qInput?.value || "");
+    const est = (fEstado?.value || "").trim();
+    const reg = (fRegion?.value || "").trim();
+    const kam = (fKAM?.value || "").trim();
+
+    let list = [...ALL];
+    if (q) {
+      list = list.filter(m =>
+        [m.nombre, m.telefono, m.direccion, m.hospital,
+         m.redSocial, m.especialidad, m.base, m.estado,
+         m.region, m.kam, m.estatus]
+        .some(v => norm(v).includes(q))
+      );
+    }
+    if (est && est !== "todos") list = list.filter(m => String(m.estado||"") === est);
+    if (reg && reg !== "todas") list = list.filter(m => String(m.region||"") === reg);
+    if (kam && kam !== "todos") list = list.filter(m => String(m.kam||"") === kam);
+
+    VIEW = list;
+    paint(VIEW);
+  }
+
+  // Este método lo llama firebase_medicos.js en cada snapshot
+  window.renderMedicos = function(docs) {
+    ALL = Array.isArray(docs) ? [...docs] : [];
+    ALL.sort((a,b) => {
+      const ta = (a.createdAt && a.createdAt.toMillis) ? a.createdAt.toMillis() : 0;
+      const tb = (b.createdAt && b.createdAt.toMillis) ? b.createdAt.toMillis() : 0;
+      return tb - ta;
+    });
+    applyFilters();
+  };
+
+  [qInput, fEstado, fRegion, fKAM].forEach(el => {
+    el && el.addEventListener("input", applyFilters);
+    el && el.addEventListener("change", applyFilters);
+  });
+
+  if (Array.isArray(window.__medicosDocs)) {
+    window.renderMedicos(window.__medicosDocs);
+  }
+})();
+</script>
+
+  <script src="assets/js/export_firestore_hist.js?v=1"></script>
+  <script src="assets/js/export_firestore_medicos.js?v=1"></script>
+  <script src="assets/js/medicos_realtime_override.js?v=1"></script>
+  <script src="assets/js/compat_followup_buttons.js?v=1"></script>
+<script type="module" src="assets/js/followup_simple.js?v=1"></script>
+  <script src="assets/js/metrics_firestore_live.js?v=1"></script>
+
+<script>
+  // Login simple: si no aciertan usuario/contraseña, no ven el CRM
+  (function(){
+    const overlay   = document.getElementById('loginOverlay');
+    if(!overlay) return;
+
+    const userInput = document.getElementById('loginUser');
+    const passInput = document.getElementById('loginPass');
+    const btn       = document.getElementById('loginBtn');
+    const err       = document.getElementById('loginError');
+
+    // Puedes cambiar estos valores si lo necesitas
+    const VALID_USERS = {
+      'innvida': '11021102',
+      'director': 'Dir3ctor#2026',
+      'BI': 'BI_Data$2026',
+      'kam': 'KamVentas!2026'
+    };
+
+    function checkLogin(){
+      const u = (userInput.value || '').trim();
+      const p = (passInput.value || '');
+
+      if(VALID_USERS[u] && p === VALID_USERS[u]){
+        overlay.style.display = 'none';
+        err.style.display = 'none';
+        userInput.value = '';
+        passInput.value = '';
+        document.body.style.overflow = ''; // reactivar scroll
+      } else {
+        err.style.display = 'block';
+        passInput.value = '';
+        passInput.focus();
+      }
+    }
+
+    btn.addEventListener('click', checkLogin);
+    passInput.addEventListener('keydown', function(ev){
+      if(ev.key === 'Enter'){
+        ev.preventDefault();
+        checkLogin();
+      }
+    });
+    userInput.addEventListener('keydown', function(ev){
+      if(ev.key === 'Enter'){
+        ev.preventDefault();
+        passInput.focus();
+      }
+    });
+
+    // Bloquear scroll mientras el login está activo
+    document.addEventListener('DOMContentLoaded', function(){
+      document.body.style.overflow = 'hidden';
+      if(userInput) userInput.focus();
+    });
+  })();
+</script>
+
+</body>
+</html>
+
+<script>
+(function(){
+  const ua = navigator.userAgent || '';
+  const isWebView = /\bFBAN|FBAV|Instagram|Line|Twitter|TikTok|GSA|GBC|wv\b/i.test(ua) || (window.webkit && window.webkit.messageHandlers);
+  if(isWebView){
+    const bar = document.createElement('div');
+    bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;background:#111827;color:#fff;padding:12px;z-index:99999;text-align:center';
+    bar.innerHTML = 'Para registrar y ver en tiempo real, <b>abre este enlace en tu navegador</b> (Chrome/Safari).';
+    document.body.appendChild(bar);
+  }
+})();
+</script>

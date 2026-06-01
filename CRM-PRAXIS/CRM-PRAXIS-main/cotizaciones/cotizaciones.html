@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cotizaciones · CRM</title>
+  <link rel="stylesheet" href="assets/css/cotizaciones.css" />
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script defer src="assets/js/firebase-config.js"></script>
+  <script defer src="assets/js/cotizaciones-page.js"></script>
+</head>
+<body>
+  <main class="container">
+    <header class="head">
+      <h1>Cotizaciones</h1> <span class="live">● en vivo</span>
+    </header>
+
+    <section class="filters">
+      <input id="q" type="search" placeholder="Buscar (folio, paciente, KAM, dx, esquema…)" />
+      <label>Desde <input id="fd" type="date" /></label>
+      <label>Hasta <input id="td" type="date" /></label>
+      <button id="reset">Limpiar</button>
+      <div class="chips" id="chips">
+        <span class="chip active" data-status="Todos">Todos</span>
+        <span class="chip" data-status="En proceso">En proceso</span>
+        <span class="chip" data-status="Aceptado">Aceptado</span>
+        <span class="chip" data-status="Cancelado">Cancelado</span>
+      </div>
+      <div class="spacer"></div>
+      
+      
+      <div class="pager">
+        <button id="loadAll" title="Cargar todo el histórico (por lotes)">Cargar histórico</button>
+        <label>Tamaño
+          <select id="pageSize">
+            <option>10</option><option selected>25</option><option>50</option><option>100</option>
+          </select>
+        </label>
+        <button id="prev">◀</button>
+        <span id="pageInfo">1/1</span>
+        <button id="next">▶</button>
+        <button id="csvView">Exportar CSV</button>
+        <button id="csvAll">Exportar CSV (todo)</button>
+        <button id="csvDetail">CSV detallado</button>
+      </div>
+    
+
+    </section>
+
+    <section class="wide-scroll">
+      <table class="table-wide">
+        <thead>
+          <tr>
+            <th>Folio</th><th>Emisión</th><th>Validez</th><th>Paciente</th><th>Teléfono</th><th>KAM</th>
+            <th>Aseguradora</th><th>Dx</th><th>Esquema</th><th>Medicamentos</th><th>Servicios</th><th>Total</th>
+            <th>Status</th><th>Motivo</th><th>Guardar</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td class="muted" colspan="15">Conectando a Firestore…</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,354 @@
+/* dashboard.css - Estilo Bento Box Oscuro */
+
+:root {
+    --bg-color: #000000;
+    --card-bg: #0d0d0d;
+    --card-border: rgba(255, 255, 255, 0.1);
+    --text-main: #ffffff;
+    --text-muted: #888888;
+    --accent: #00ffcc;
+    --accent-secondary: #ff00ff;
+    --accent-gradient: linear-gradient(135deg, #00ffcc, #ff00ff);
+    --radius: 36px; /* Bordes muy redondeados característicos del diseño */
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding-top: 100px;
+    padding-bottom: 50px;
+    overflow-x: hidden;
+}
+
+/* Typography */
+.hero-title {
+    font-size: 3.8rem;
+    font-weight: 600;
+    line-height: 1.05;
+    margin: 1.5rem 0 1rem;
+    letter-spacing: -0.04em;
+}
+
+.gradient-text {
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.hero-subtitle {
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    max-width: 90%;
+    line-height: 1.5;
+}
+
+/* Terminal Text Style */
+.terminal-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 1.2rem;
+    border-radius: 16px;
+    margin-bottom: 2rem;
+    border: 1px solid var(--card-border);
+    line-height: 1.6;
+}
+.terminal-text .muted { color: #666; }
+.terminal-text .keyword { color: var(--accent-secondary); }
+.terminal-text .variable { color: var(--accent); }
+.terminal-text .string { color: #e6db74; }
+
+/* Sticky Header - Glassmorphism */
+.glass-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 80px;
+    padding: 0 3rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    z-index: 100;
+    border-bottom: 1px solid var(--card-border);
+}
+
+.logo {
+    font-weight: 600;
+    font-size: 1.2rem;
+    letter-spacing: 1.5px;
+}
+
+.menu-btn {
+    background: none;
+    border: none;
+    color: var(--text-main);
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+.menu-btn:hover {
+    transform: scale(1.1);
+}
+
+/* Bento Grid System */
+.bento-container {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-auto-rows: 240px;
+    gap: 24px;
+    padding: 0 3rem;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+/* Base Card Styles */
+.bento-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    border: 1px solid var(--card-border);
+    padding: 2.5rem;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.3s ease;
+}
+
+.bento-card:hover {
+    border-color: rgba(255, 255, 255, 0.25);
+    transform: translateY(-4px);
+}
+
+/* Spanning utilities */
+.col-span-1 { grid-column: span 1; }
+.col-span-2 { grid-column: span 2; }
+.col-span-3 { grid-column: span 3; }
+.col-span-4 { grid-column: span 4; }
+
+.row-span-1 { grid-row: span 1; }
+.row-span-2 { grid-row: span 2; }
+
+/* Hero Card */
+.hero-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* Metrics Cards */
+.metric-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.metric-header {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    letter-spacing: 1px;
+}
+
+.metric-value {
+    font-size: 4.5rem;
+    font-weight: 600;
+    letter-spacing: -0.05em;
+    line-height: 1;
+}
+
+.metric-value .plus {
+    color: var(--accent);
+    font-size: 2rem;
+    vertical-align: super;
+}
+
+/* Chart Bars */
+.metric-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    height: 40px;
+    margin-top: 1rem;
+}
+.metric-chart .bar {
+    flex: 1;
+    background: var(--card-border);
+    border-radius: 4px;
+    transition: height 0.5s ease;
+}
+.metric-card:hover .metric-chart .bar {
+    background: var(--accent);
+}
+
+/* Accent Card */
+.accent-bg {
+    background: var(--accent-gradient);
+    color: #000;
+    border: none;
+}
+.accent-bg .metric-header {
+    color: rgba(0,0,0,0.6);
+}
+.accent-bg .metric-value .plus {
+    color: #000;
+}
+
+/* General Card Header */
+.card-header {
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Map Card */
+.map-card {
+    background-image: radial-gradient(circle at center, rgba(255,255,255,0.05) 1px, transparent 1px);
+    background-size: 20px 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.map-container {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+}
+.map-card .card-header {
+    position: relative;
+    z-index: 1;
+}
+
+.map-pin {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: rgba(255,255,255,0.5);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.map-pin:hover {
+    background: #fff;
+    transform: translate(-50%, -50%) scale(1.5);
+}
+
+.map-pin.active {
+    background: var(--accent);
+    box-shadow: 0 0 15px var(--accent);
+}
+
+.map-line {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+}
+
+/* Skills Card */
+.skills-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.skill-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+}
+
+.skill-info .score {
+    font-family: 'JetBrains Mono', monospace;
+    background: rgba(255,255,255,0.1);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+}
+
+.skill-bar {
+    height: 6px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.skill-bar .fill {
+    height: 100%;
+    background: var(--accent-gradient);
+    border-radius: 10px;
+}
+
+/* Team Card */
+.team-avatars {
+    display: flex;
+}
+
+.avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1.1rem;
+    border: 3px solid var(--card-bg);
+    margin-left: -15px;
+    transition: transform 0.2s ease;
+}
+.avatar:hover {
+    transform: translateY(-5px);
+    z-index: 10;
+}
+.avatar:first-child {
+    margin-left: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .bento-container {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    .hero-card { grid-column: span 3; }
+    .map-card { grid-column: span 3; }
+}
+
+@media (max-width: 900px) {
+    .bento-container {
+        grid-template-columns: repeat(2, 1fr);
+        padding: 0 1.5rem;
+    }
+    .hero-title { font-size: 3rem; }
+}
+
+@media (max-width: 600px) {
+    .bento-container {
+        grid-template-columns: 1fr;
+    }
+    .col-span-2, .col-span-3, .col-span-4 { grid-column: span 1; }
+    .row-span-2 { grid-row: span 1; min-height: 400px; }
+    
+    .hero-title { font-size: 2.5rem; }
+    .glass-header { padding: 0 1.5rem; }
+}

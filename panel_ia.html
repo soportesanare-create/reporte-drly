@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orbit AI | Nomad & Sanare CRM</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="panel_ia.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Firebase Compat -->
+    <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+</head>
+<body>
+
+<div class="dashboard-wrapper">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="logo-mark">⚡</div>
+        <nav class="nav-icons">
+            <button class="nav-item active" data-target="view-dashboard" title="Dashboard Central">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                <span class="nav-label">Home</span>
+            </button>
+            <button class="nav-item" data-target="view-nomad" title="Panel Nomad">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+                <span class="nav-label">Nomad</span>
+            </button>
+            <button class="nav-item" data-target="view-sanare" title="Panel Sanare">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                <span class="nav-label">Sanare</span>
+            </button>
+            <button class="nav-item" data-target="view-crm" title="CRM Médico">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                <span class="nav-label">CRM</span>
+            </button>
+        </nav>
+        <div class="sidebar-bottom">
+            <button class="nav-item" id="themeToggle" title="Cambiar Tema (Claro/Oscuro)">
+                <svg class="gear-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition: transform 0.5s ease;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                <span class="nav-label">Tema</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Contenido Principal -->
+    <main class="main-content">
+        <!-- Asistente IA (Global en todas las vistas) -->
+        <header class="ai-header">
+            <div class="ai-input-wrapper">
+                <span class="ai-icon" title="Jane AI">👩‍💻</span>
+                <input type="text" id="aiPrompt" placeholder="Pregúntale a Jane: ventas, KAMs, CRM médicos, comisiones, análisis..." autocomplete="off">
+                <button id="aiMicBtn" class="ai-mic-btn" title="Hablar con Jane por voz">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                </button>
+                <button id="aiSubmit" class="ai-btn">Enviar Consulta</button>
+                <button id="downloadPdfBtn" class="ai-btn" style="background: linear-gradient(135deg,#7c3aed,#4f46e5); flex-shrink:0;" title="Descargar reporte PDF">📄 PDF</button>
+            </div>
+            <div id="aiResponseContainer" class="ai-response-box hidden">
+                <div class="ai-header-sm">JANE AI SYSTEM</div>
+                <div id="aiResponseText" class="ai-content"></div>
+            </div>
+        </header>
+
+        <!-- ============================================== -->
+        <!-- VISTA: DASHBOARD PRINCIPAL                     -->
+        <!-- ============================================== -->
+        <div id="view-dashboard" class="view-section active">
+            <div class="view-title">
+                <h2>Dashboard Global</h2>
+                <p>Resumen general de plataformas y progreso de metas.</p>
+            </div>
+            <div class="dashboard-grid">
+                <!-- Ventas Nomad -->
+                <div class="card card-nomad">
+                    <div class="card-header">
+                        <h3>Ventas Nomad</h3>
+                        <span class="badge badge-success">+15% este mes</span>
+                    </div>
+                    <div class="card-value" id="nomadSalesTotal">$1,245,000 <span class="currency">MXN</span></div>
+                    <div class="chart-container"><canvas id="nomadChart"></canvas></div>
+                </div>
+
+                <!-- Ventas Sanare -->
+                <div class="card card-sanare">
+                    <div class="card-header">
+                        <h3>Ventas Sanare</h3>
+                        <span class="badge badge-neutral">Estabilidad 90%</span>
+                    </div>
+                    <div class="card-value" id="sanareSalesTotal">$850,200 <span class="currency">MXN</span></div>
+                    <div class="chart-container"><canvas id="sanareChart"></canvas></div>
+                </div>
+
+                <!-- Metas -->
+                <div class="card card-goals">
+                    <div class="card-header"><h3>Progreso de Metas (Q2)</h3></div>
+                    <div class="goal-circle">
+                        <div class="circular-progress" id="mainProgressCircle" data-progress="78">
+                            <div class="inner-circle"><span class="percentage" id="goalPercentageText">78%</span></div>
+                        </div>
+                    </div>
+                    <div class="goal-stats">
+                        <div class="stat"><span>Ingreso</span> <span class="val" id="goalCurrentText">$2.09M</span></div>
+                        <div class="stat"><span>Objetivo</span> <span class="val" id="goalTargetText">$2.68M</span></div>
+                    </div>
+                </div>
+                </div>
+            </div>
+
+            <!-- Gráficos de Pronóstico -->
+            <div class="view-title" style="margin-top: 3rem;">
+                <h2>Proyección y Tendencia</h2>
+                <p>Pronóstico de ventas estimado por el algoritmo para el próximo trimestre.</p>
+            </div>
+            <div class="dashboard-grid" style="grid-template-columns: 1fr;">
+                <div class="card">
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <h3 id="forecastTitle">Pronóstico Global</h3>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <button class="action-btn active" id="btnForecastGlobal" style="background: var(--accent); color: #000; border: none;">Global</button>
+                            <button class="action-btn" id="btnForecastNomad" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid #3b82f6;">Nomad</button>
+                            <button class="action-btn" id="btnForecastSanare" style="background: rgba(236, 72, 153, 0.1); color: #ec4899; border: 1px solid #ec4899;">Sanare</button>
+                        </div>
+                    </div>
+                    <div class="chart-container" style="height: 300px;"><canvas id="forecastChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- VISTA: PANEL NOMAD (KAMs, Comisiones)          -->
+        <!-- ============================================== -->
+        <div id="view-nomad" class="view-section hidden">
+            <div class="view-title">
+                <h2>Panel Comercial: Nomad</h2>
+                <p>Métricas específicas, comisiones y desempeño de KAMs de la plataforma Nomad.</p>
+            </div>
+            
+            <div class="dashboard-grid">
+                <!-- Tarjeta de Comisiones -->
+                <div class="card" style="border-color: rgba(59, 130, 246, 0.4);">
+                    <div class="card-header">
+                        <h3>Total Comisiones a Pagar</h3>
+                        <span class="badge" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">Nomad</span>
+                    </div>
+                    <div class="card-value" id="nomadCommissionsTotal" style="color: #3b82f6;">$185,400 <span class="currency">MXN</span></div>
+                    <div class="stat"><span style="color: var(--text-secondary);">Proyectado cierre de mes: <b id="nomadCommissionsProjected">$210,000 MXN</b></span></div>
+                </div>
+
+                <!-- Tarjeta Metas KAM -->
+                <div class="card col-span-2">
+                    <div class="card-header">
+                        <h3>Progreso Metas por KAM (Nomad)</h3>
+                        <button class="action-btn">Exportar CSV</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="crm-table">
+                            <thead>
+                                <tr><th>KAM (Key Account Manager)</th><th>Cuentas Activas</th><th>Meta Q2</th><th>Comisión Estimada</th></tr>
+                            </thead>
+                            <tbody id="nomadKamTableBody">
+                                <tr>
+                                    <td><div class="doc-info"><div class="avatar">RG</div> Roberto Gómez</div></td>
+                                    <td>45 Corporativos</td>
+                                    <td>
+                                        <div style="display:flex; align-items:center; gap:10px;">
+                                            <div class="progress-bar-bg" style="width: 100px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 4px;">
+                                                <div class="progress-fill" style="width: 90%; height: 100%; background: #3b82f6; border-radius: 4px;"></div>
+                                            </div>
+                                            <span style="font-size: 0.8rem;">90%</span>
+                                        </div>
+                                    </td>
+                                    <td><span style="color: #00ffa3; font-weight: 500;">$85,000 MXN</span></td>
+                                </tr>
+                                <tr>
+                                    <td><div class="doc-info"><div class="avatar">AL</div> Ana López</div></td>
+                                    <td>32 Clínicas</td>
+                                    <td>
+                                        <div style="display:flex; align-items:center; gap:10px;">
+                                            <div class="progress-bar-bg" style="width: 100px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 4px;">
+                                                <div class="progress-fill" style="width: 65%; height: 100%; background: #3b82f6; border-radius: 4px;"></div>
+                                            </div>
+                                            <span style="font-size: 0.8rem;">65%</span>
+                                        </div>
+                                    </td>
+                                    <td><span style="color: #00ffa3; font-weight: 500;">$42,500 MXN</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gráfica Histórica Nomad 2025 vs 2026 -->
+            <div class="view-title" style="margin-top: 2.5rem;">
+                <h2>Venta General Nomad 2025 – 2026</h2>
+                <p>Comparativa histórica mensual: cómo estábamos en 2025 y cómo vamos en 2026.</p>
+            </div>
+            <div class="dashboard-grid" style="grid-template-columns: 1fr;">
+                <div class="card" style="border-color: rgba(59, 130, 246, 0.35);">
+                    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                        <h3>Ventas Mensuales por Año</h3>
+                        <div style="display:flex; gap:12px; align-items:center;">
+                            <span style="display:flex; align-items:center; gap:6px; font-size:0.82rem; color:#8a8f98;">
+                                <span style="width:12px;height:12px;border-radius:3px;background:#3b82f6;display:inline-block;"></span> 2025
+                            </span>
+                            <span style="display:flex; align-items:center; gap:6px; font-size:0.82rem; color:#8a8f98;">
+                                <span style="width:12px;height:12px;border-radius:3px;background:#f97316;display:inline-block;"></span> 2026
+                            </span>
+                            <span class="badge" style="background:rgba(59,130,246,0.1); color:#3b82f6;">Interactivo</span>
+                        </div>
+                    </div>
+                    <div class="chart-container" style="height: 320px; margin-top: 1rem;">
+                        <canvas id="nomadHistoryChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- VISTA: PANEL SANARE (KAMs, Comisiones)         -->
+        <!-- ============================================== -->
+        <div id="view-sanare" class="view-section hidden">
+            <div class="view-title">
+                <h2>Panel Comercial: Sanare</h2>
+                <p>Métricas específicas, comisiones y desempeño de KAMs de la plataforma Sanare.</p>
+            </div>
+            
+            <div class="dashboard-grid">
+                <!-- Tarjeta de Comisiones -->
+                <div class="card" style="border-color: rgba(236, 72, 153, 0.4);">
+                    <div class="card-header">
+                        <h3>Total Comisiones a Pagar</h3>
+                        <span class="badge" style="background: rgba(236, 72, 153, 0.1); color: #ec4899;">Sanare</span>
+                    </div>
+                    <div class="card-value" id="sanareCommissionsTotal" style="color: #ec4899;">$112,800 <span class="currency">MXN</span></div>
+                    <div class="stat"><span style="color: var(--text-secondary);">Proyectado cierre de mes: <b id="sanareCommissionsProjected">$135,000 MXN</b></span></div>
+                </div>
+
+                <!-- Tarjeta Metas KAM -->
+                <div class="card col-span-2">
+                    <div class="card-header">
+                        <h3>Progreso Metas por KAM (Sanare)</h3>
+                        <button class="action-btn">Exportar CSV</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="crm-table">
+                            <thead>
+                                <tr><th>KAM (Key Account Manager)</th><th>Médicos Afiliados</th><th>Meta Q2</th><th>Comisión Estimada</th></tr>
+                            </thead>
+                            <tbody id="sanareKamTableBody">
+                                <tr>
+                                    <td><div class="doc-info"><div class="avatar">CM</div> Carlos Mora</div></td>
+                                    <td>120 Doctores</td>
+                                    <td>
+                                        <div style="display:flex; align-items:center; gap:10px;">
+                                            <div class="progress-bar-bg" style="width: 100px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 4px;">
+                                                <div class="progress-fill" style="width: 82%; height: 100%; background: #ec4899; border-radius: 4px;"></div>
+                                            </div>
+                                            <span style="font-size: 0.8rem;">82%</span>
+                                        </div>
+                                    </td>
+                                    <td><span style="color: #00ffa3; font-weight: 500;">$65,000 MXN</span></td>
+                                </tr>
+                                <tr>
+                                    <td><div class="doc-info"><div class="avatar">SV</div> Sofía Vargas</div></td>
+                                    <td>85 Doctores</td>
+                                    <td>
+                                        <div style="display:flex; align-items:center; gap:10px;">
+                                            <div class="progress-bar-bg" style="width: 100px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 4px;">
+                                                <div class="progress-fill" style="width: 55%; height: 100%; background: #ec4899; border-radius: 4px;"></div>
+                                            </div>
+                                            <span style="font-size: 0.8rem;">55%</span>
+                                        </div>
+                                    </td>
+                                    <td><span style="color: #00ffa3; font-weight: 500;">$32,000 MXN</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- VISTA: CRM MEDICO GENERAL                      -->
+        <!-- ============================================== -->
+        <div id="view-crm" class="view-section hidden">
+            <div class="view-title">
+                <h2>CRM de Médicos (Global)</h2>
+                <p>Agenda completa de visitas, estatus de leads y distribución geográfica.</p>
+            </div>
+
+            <!-- Gráfico: Seguimiento de Médicos Asignados (Excel Upload) -->
+            <div class="card col-span-full" style="margin-bottom: 2rem;">
+                <div class="card-header">
+                    <h3>Seguimiento de Médicos Asignados</h3>
+                    <p style="font-size: 0.8rem; color: #8a8f98; margin-top: 4px;">Distribución de médicos asignados por KAM (Fuente: Excel Asignados)</p>
+                </div>
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="seguimientoKamsChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Nuevos Registros por Semana -->
+            <div class="card col-span-full" style="margin-bottom: 2rem; border-color: rgba(59,130,246,0.3);">
+                <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <h3 style="color: #3b82f6;">Nuevos Registros (Semana Actual)</h3>
+                        <p style="font-size: 0.8rem; color: #8a8f98; margin-top: 4px;">Últimas altas de médicos y asignación de KAMs</p>
+                    </div>
+                    <span id="nuevosRegistrosBadge" class="badge" style="background: rgba(59,130,246,0.1); color: #3b82f6;">Conectando a base de datos...</span>
+                </div>
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="crm-table" style="font-size: 0.85rem;">
+                        <thead style="position: sticky; top: 0; background: #0d1520; z-index: 2;">
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Teléfono</th>
+                                <th>Dirección</th>
+                                <th>Hospital</th>
+                                <th>Red Social</th>
+                                <th>Especialidad</th>
+                                <th>Base</th>
+                                <th>Estado</th>
+                                <th>Región</th>
+                                <th>Gerente / KAM</th>
+                                <th>Seguimiento</th>
+                            </tr>
+                        </thead>
+                        <tbody id="nuevosRegistrosBody">
+                            <tr><td colspan="11" style="text-align:center; padding: 2rem; color: #8a8f98;">Cargando data real de nuevos KAMs...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Mapa de Propensión -->
+            <div class="dashboard-grid" style="grid-template-columns: 1fr; margin-bottom: 2rem;">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Distribución de Médicos y Propensión por Estado</h3>
+                        <span class="badge" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">Análisis Interactivo</span>
+                    </div>
+                    <div id="mexicoMap" style="height: 480px; border-radius: 12px; margin-top: 1rem; z-index: 1;"></div>
+                    <!-- Map legend -->
+                    <div style="display: flex; gap: 20px; margin-top: 1rem; flex-wrap: wrap;">
+                        <span style="font-size: 0.78rem; color: var(--text-secondary); display:flex; align-items:center; gap:6px;"><span style="width:12px;height:12px;border-radius:50%;background:#00ffa3;display:inline-block;"></span> Alta propensión</span>
+                        <span style="font-size: 0.78rem; color: var(--text-secondary); display:flex; align-items:center; gap:6px;"><span style="width:12px;height:12px;border-radius:50%;background:#3b82f6;display:inline-block;"></span> Propensión media</span>
+                        <span style="font-size: 0.78rem; color: var(--text-secondary); display:flex; align-items:center; gap:6px;"><span style="width:12px;height:12px;border-radius:50%;background:#f59e0b;display:inline-block;"></span> En desarrollo</span>
+                        <span style="font-size: 0.78rem; color: var(--text-secondary); display:flex; align-items:center; gap:6px;"><span style="width:12px;height:12px;border-radius:50%;background:#64748b;display:inline-block;"></span> Baja cobertura</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CRM Analytics: KAM Propensity + Hospitals -->
+            <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 2rem;">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Médicos por KAM</h3>
+                        <span class="badge" style="background: rgba(0,255,163,0.1); color: var(--accent);">Top 10</span>
+                    </div>
+                    <div class="chart-container" style="height: 280px; margin-top: 1rem;"><canvas id="kamAnalysisChart"></canvas></div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Top Hospitales</h3>
+                        <span class="badge" style="background: rgba(236,72,153,0.1); color: #ec4899;">Por volumen</span>
+                    </div>
+                    <div class="chart-container" style="height: 280px; margin-top: 1rem;"><canvas id="hospitalChart"></canvas></div>
+                </div>
+            </div>
+
+            <!-- EMBUDO INNVIDA: Detalle Operativo Completo -->
+            <div class="view-title" style="margin-top:2.5rem;">
+                <h2>Embudo Operativo INNVIDA</h2>
+                <p>Todos los registros en tiempo real: pagos, programaciones y seguimiento clínico.</p>
+            </div>
+            <div class="dashboard-grid" style="grid-template-columns:repeat(4,1fr); margin-bottom:1.5rem;">
+                <div class="card" style="border-color:rgba(0,255,163,0.3);">
+                    <div class="card-header"><h3 style="font-size:0.85rem;">Total Registros</h3></div>
+                    <div class="card-value" id="embudoTotalCount" style="font-size:1.6rem;">—</div>
+                </div>
+                <div class="card" style="border-color:rgba(59,130,246,0.3);">
+                    <div class="card-header"><h3 style="font-size:0.85rem;">Pagos Confirmados</h3></div>
+                    <div class="card-value" id="embudoPagadosCount" style="font-size:1.6rem; color:#3b82f6;">—</div>
+                </div>
+                <div class="card" style="border-color:rgba(249,115,22,0.3);">
+                    <div class="card-header"><h3 style="font-size:0.85rem;">Ingreso Real</h3></div>
+                    <div class="card-value" id="embudoIngresoReal" style="font-size:1.3rem; color:#f97316;">—</div>
+                </div>
+                <div class="card" style="border-color:rgba(236,72,153,0.3);">
+                    <div class="card-header"><h3 style="font-size:0.85rem;">Aplicados</h3></div>
+                    <div class="card-value" id="embudoAplicadosCount" style="font-size:1.6rem; color:#ec4899;">—</div>
+                </div>
+            </div>
+
+            <div class="card col-span-full">
+                <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <h3>Detalle Completo del Embudo</h3>
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <input id="embudoSearch" type="text" placeholder="Buscar paciente, KAM, sede..." style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:6px 12px; color:#e5e7eb; font-size:0.82rem; outline:none; width:220px;" oninput="filterEmbudoTable()">
+                        <span id="embudoCountBadge" class="badge" style="background:rgba(0,255,163,0.1); color:var(--accent);">0 registros</span>
+                    </div>
+                </div>
+                <div class="table-responsive" style="max-height:480px; overflow-y:auto;">
+                    <table class="crm-table">
+                        <thead style="position:sticky; top:0; background:#0d1520; z-index:2;">
+                            <tr>
+                                <th>Paciente</th>
+                                <th>Marca</th>
+                                <th>KAM</th>
+                                <th>Sede</th>
+                                <th>Pago</th>
+                                <th>Monto</th>
+                                <th>Programación</th>
+                                <th>Tratamiento</th>
+                                <th>Fecha Pago</th>
+                            </tr>
+                        </thead>
+                        <tbody id="embudoDetailBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- CRM: Directorio de Leads -->
+            <div class="view-title" style="margin-top:2.5rem;">
+                <h2>Directorio de Leads CRM</h2>
+                <p>Cotizaciones activas de Nomad y Sanare en tiempo real.</p>
+            </div>
+            <div class="card col-span-full">
+                <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <h3>Todos los Leads Activos</h3>
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <input id="crmSearch" type="text" placeholder="Buscar médico, KAM, status..." style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:6px 12px; color:#e5e7eb; font-size:0.82rem; outline:none; width:220px;" oninput="filterCrmTable()">
+                        <span id="crmCountBadge" class="badge" style="background:rgba(0,255,163,0.1); color:var(--accent);">0 leads</span>
+                    </div>
+                </div>
+                <div class="table-responsive" style="max-height:480px; overflow-y:auto;">
+                    <table class="crm-table">
+                        <thead style="position:sticky; top:0; background:#0d1520; z-index:2;">
+                            <tr>
+                                <th>Médico / Paciente</th>
+                                <th>Plataforma</th>
+                                <th>KAM</th>
+                                <th>Monto</th>
+                                <th>Estatus</th>
+                            </tr>
+                        </thead>
+                        <tbody id="crmTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<script src="data.js"></script>
+<script src="medicos_data.js"></script>
+<script src="seguimiento_medicos.js"></script>
+<script src="firebase_dashboard.js"></script>
+<script src="config.js"></script>
+<script src="panel_ia.js"></script>
+<script src="pdf_report.js"></script>
+</body>
+</html>

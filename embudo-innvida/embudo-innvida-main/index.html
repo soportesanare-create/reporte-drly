@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>INNVIDA | Seguimiento de Cotizaciones, Pago y Programación</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+</head>
+<body>
+  <div id="login-container" class="login-shell">
+    <div class="login-card">
+      <img src="img/innvida-logo.png" alt="INNVIDA" class="login-logo" />
+      <h1>Acceso al tablero operativo</h1>
+      <p>Seguimiento integral de cotizaciones, pago confirmado y programación clínica.</p>
+      <form id="login-form">
+        <label>Usuario</label>
+        <input type="text" id="username" autocomplete="username" required />
+        <label>Contraseña</label>
+        <input type="password" id="password" autocomplete="current-password" required />
+        <button type="submit" class="btn btn-primary btn-block">Entrar</button>
+        <p id="login-error" class="login-error">Usuario o contraseña incorrectos.</p>
+      </form>
+      <small>Acceso de uso interno para operación INNVIDA.</small>
+    </div>
+  </div>
+
+  <div id="appContainer" class="app-shell" style="display:none;">
+    <header class="hero">
+      <div>
+        <div class="eyebrow">INNVIDA · Operación comercial + clínica</div>
+        <h1>Embudo unificado de cotización → pago → programación</h1>
+        <p>La recepción puede marcar si el paciente ya pagó y programación puede calendarizar la atención sin salir del mismo dashboard.</p>
+      </div>
+      <div class="hero-actions">
+        <button id="btnExportFacturacion" class="btn btn-primary">Descargar Excel facturación (.xlsx)</button>
+        <button id="btnExportProgramacion" class="btn btn-secondary">Descargar Excel programación (.xlsx)</button>
+        <button id="btnExportReporte" class="btn btn-secondary">Descargar reporte ejecutivo (.html)</button>
+        <button id="btnTema" class="btn btn-ghost">Modo claro</button>
+        <button id="btnCerrarSesion" class="btn btn-ghost">Salir</button>
+      </div>
+      <div id="saveStatus" class="save-status muted">Sin cambios recientes</div>
+    </header>
+
+    <main class="dashboard">
+      <section class="panel panel-kpis">
+        <div class="section-head">
+          <h2>KPIs operativos</h2>
+          <span id="ultimaActualizacion" class="muted">Esperando datos del mes actual...</span>
+        </div>
+        <div class="kpi-grid">
+          <article class="kpi-card accent-blue">
+            <span>Cotizaciones activas</span>
+            <strong id="kpiCotizaciones">0</strong>
+            <small id="kpiCotizacionesMonto">$0</small>
+          </article>
+          <article class="kpi-card accent-green">
+            <span>Pagos confirmados</span>
+            <strong id="kpiPagados">0</strong>
+            <small id="kpiPagadosMonto">$0</small>
+          </article>
+          <article class="kpi-card accent-purple">
+            <span>Por programar</span>
+            <strong id="kpiPorProgramar">0</strong>
+            <small id="kpiPorProgramarMonto">$0</small>
+          </article>
+          <article class="kpi-card accent-gold">
+            <span>Programados</span>
+            <strong id="kpiProgramados">0</strong>
+            <small id="kpiProgramadosMonto">$0</small>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel panel-filters">
+        <div class="section-head">
+          <h2>Filtros</h2>
+          <button id="btnLimpiarFiltros" class="btn btn-ghost">Ver histórico</button>
+        </div>
+        <div class="filters-grid">
+          <div class="field grow-2">
+            <label>Buscar cotización / paciente / médico / KAM</label>
+            <input type="text" id="filtroTexto" placeholder="Ej. Procoro, FOLFOX, Camarín, folio..." />
+          </div>
+          <div class="field">
+            <label>Marca</label>
+            <div class="chip-group">
+              <label class="chip"><input type="checkbox" class="filtro-marca" value="SANARE" checked /> Sanaré</label>
+              <label class="chip"><input type="checkbox" class="filtro-marca" value="NOMAD" checked /> Nomad</label>
+            </div>
+          </div>
+          <div class="field">
+            <label>Fecha emisión desde</label>
+            <input type="date" id="filtroFechaInicio" />
+          </div>
+          <div class="field">
+            <label>Fecha emisión hasta</label>
+            <input type="date" id="filtroFechaFin" />
+          </div>
+          <div class="field">
+            <label>Seguimiento comercial</label>
+            <select id="filtroStatus1" multiple size="5"></select>
+          </div>
+          <div class="field">
+            <label>Pago</label>
+            <select id="filtroPago" multiple size="4"></select>
+          </div>
+          <div class="field">
+            <label>Programación</label>
+            <select id="filtroProgramacion" multiple size="5"></select>
+          </div>
+          <div class="field">
+            <label>Sede</label>
+            <select id="filtroSede">
+              <option value="">Todas</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel panel-summary">
+        <div class="section-head">
+          <h2>Embudo y carga</h2>
+          <span id="contadorFilas" class="muted">0 registros</span>
+        </div>
+        <div class="chart-grid">
+          <div class="chart-card">
+            <h3>Conversión operativa</h3>
+            <canvas id="chartEmbudo"></canvas>
+          </div>
+          <div class="chart-card">
+            <h3>Facturación por marca</h3>
+            <canvas id="chartMarca"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel panel-table">
+        <div class="section-head">
+          <h2>Tabla unificada</h2>
+          <div class="legend-inline">
+            <span class="pill status-paid">Pagó</span>
+            <span class="pill status-programmed">Programado</span>
+            <span class="pill status-pending">Pendiente</span>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Marca</th>
+                <th>Folio</th>
+                <th>Paciente</th>
+                <th>Médico</th>
+                <th>KAM</th>
+                <th>Fecha emisión</th>
+                <th>Total</th>
+                <th>Seguimiento</th>
+                <th>Pago</th>
+                <th>Programación</th>
+                <th>Fecha programada</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tablaCotizacionesBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="drawerBackdrop" class="drawer-backdrop hidden"></div>
+  <aside id="drawer" class="drawer hidden">
+    <div class="drawer-head">
+      <div>
+        <div id="drawerMarca" class="eyebrow"></div>
+        <h2 id="drawerPaciente">Paciente</h2>
+        <p id="drawerMeta" class="muted"></p>
+      </div>
+      <button id="btnCerrarDrawer" class="btn btn-ghost">Cerrar</button>
+    </div>
+
+    <div class="drawer-body">
+      <section class="drawer-card">
+        <h3>Resumen de cotización</h3>
+        <div id="drawerResumen" class="detail-grid"></div>
+      </section>
+
+      <section class="drawer-card">
+        <div class="section-head compact">
+          <h3>Recepción · Confirmación de pago</h3>
+          <span class="muted">Registra si el paciente ya pagó</span>
+        </div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Estatus de pago</label>
+            <select id="detallePagoStatus"></select>
+          </div>
+          <div class="field">
+            <label>Fecha de pago</label>
+            <input type="date" id="detallePagoFecha" />
+          </div>
+          <div class="field">
+            <label>Monto pagado</label>
+            <input type="number" id="detallePagoMonto" min="0" step="0.01" placeholder="0.00" />
+          </div>
+          <div class="field">
+            <label>Método de pago</label>
+            <input type="text" id="detallePagoMetodo" placeholder="Transferencia, TDC, efectivo..." />
+          </div>
+          <div class="field">
+            <label>Registró recepción</label>
+            <input type="text" id="detallePagoRegistradoPor" placeholder="Nombre del responsable" />
+          </div>
+          <div class="field grow-2">
+            <label>Observaciones de pago</label>
+            <input type="text" id="detallePagoNotas" placeholder="Referencia, aseguradora, anticipo, etc." />
+          </div>
+        </div>
+      </section>
+
+      <section class="drawer-card">
+        <div class="section-head compact">
+          <h3>Programación · Agenda clínica</h3>
+          <span class="muted">Captura la cita una vez confirmado el pago</span>
+        </div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Estatus de programación</label>
+            <select id="detalleProgramacionStatus"></select>
+          </div>
+          <div class="field">
+            <label>Fecha de infusión / servicio</label>
+            <input type="date" id="detalleProgramacionFecha" />
+          </div>
+          <div class="field">
+            <label>Hora de cita</label>
+            <input type="time" id="detalleProgramacionHora" />
+          </div>
+          <div class="field">
+            <label>Servicio</label>
+            <input type="text" id="detalleServicio" placeholder="Infusión, retiro de infusor..." />
+          </div>
+          <div class="field">
+            <label>Ciclo</label>
+            <input type="text" id="detalleCiclo" placeholder="C1, C2, mantenimiento..." />
+          </div>
+          <div class="field">
+            <label>Tipo de tratamiento</label>
+            <input type="text" id="detalleTipoTratamiento" placeholder="QT, inmunoterapia..." />
+          </div>
+          <div class="field grow-2">
+            <label>Tratamiento</label>
+            <input type="text" id="detalleTratamiento" placeholder="Esquema o tratamiento" />
+          </div>
+          <div class="field grow-2">
+            <label>Diagnóstico</label>
+            <input type="text" id="detalleDiagnostico" placeholder="Diagnóstico clínico" />
+          </div>
+          <div class="field">
+            <label>Médico</label>
+            <input type="text" id="detalleMedico" placeholder="Médico tratante" />
+          </div>
+          <div class="field">
+            <label>Sede</label>
+            <input type="text" id="detalleSede" placeholder="Narvarte, Toluca..." />
+          </div>
+          <div class="field">
+            <label>Programó</label>
+            <input type="text" id="detalleProgramadoPor" placeholder="Nombre del responsable" />
+          </div>
+          <div class="field grow-2">
+            <label>Notas operativas</label>
+            <input type="text" id="detalleProgramacionNotas" placeholder="Indicaciones, autorizaciones, reprogramación..." />
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="drawer-footer">
+      <button id="btnGuardarDetalle" class="btn btn-primary">Guardar cambios en Firebase</button>
+    </div>
+  </aside>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script>
+    (function() {
+      const USERS = [
+        { username: "Victor", password: "innvida2026" },
+        { username: "Antonio", password: "innvida2026" },
+        { username: "Guillermo", password: "innvida2026" },
+        { username: "Sedes", password: "sanare2026" }
+      ];
+
+      function isValidCredentials(user, pass) {
+        if (!user || !pass) return false;
+        const normalized = user.trim().toLowerCase();
+        return USERS.some(function(item) {
+          return item.username.toLowerCase() === normalized && item.password === pass;
+        });
+      }
+
+      function showDashboard() {
+        var login = document.getElementById('login-container');
+        var app = document.getElementById('appContainer');
+        if (login) login.style.display = 'none';
+        if (app) app.style.display = '';
+      }
+
+      document.addEventListener('DOMContentLoaded', function() {
+        var saved = window.localStorage ? localStorage.getItem('innvidaDashboardUser') : null;
+        if (saved) showDashboard();
+
+        var form = document.getElementById('login-form');
+        if (form) {
+          form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            var userInput = document.getElementById('username');
+            var passInput = document.getElementById('password');
+            var errorElem = document.getElementById('login-error');
+            var user = userInput ? userInput.value : '';
+            var pass = passInput ? passInput.value : '';
+            if (isValidCredentials(user, pass)) {
+              if (window.localStorage) localStorage.setItem('innvidaDashboardUser', user);
+              if (errorElem) errorElem.style.display = 'none';
+              showDashboard();
+            } else if (errorElem) {
+              errorElem.style.display = 'block';
+            }
+          });
+        }
+
+        var btnOut = document.getElementById('btnCerrarSesion');
+        if (btnOut) {
+          btnOut.addEventListener('click', function() {
+            if (window.localStorage) localStorage.removeItem('innvidaDashboardUser');
+            window.location.reload();
+          });
+        }
+      });
+    })();
+  </script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

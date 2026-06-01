@@ -1,0 +1,26 @@
+{
+  "by_month": {
+    "labels": [],
+    "values": []
+  },
+  "by_status": {
+    "labels": [
+      "ACTIVO",
+      "PENDIENTE",
+      "CANCELADO",
+      ""
+    ],
+    "values": [
+      19,
+      12,
+      9,
+      3
+    ]
+  },
+  "by_estado": {
+    "labels": [],
+    "values": []
+  },
+  "avg_value": 64705.32,
+  "total_count": 43
+}
